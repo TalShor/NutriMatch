@@ -78,11 +78,6 @@ class BaseDataDigestion:
                 os.path.join(self.gpt_data_dir, "translated_data.parquet")
             )
 
-        # check if few_shot.yaml exists
-        self.few_shot_path = os.path.join(self.raw_data_dir, "few_shot.yaml")
-        if not os.path.exists(self.few_shot_path):
-            raise FileNotFoundError(f"Few shot file not found at {self.few_shot_path}")
-
     def download_raw_data(self) -> pd.DataFrame:
         """Retrieve the raw dataset and return it as a DataFrame."""
         raise NotImplementedError
