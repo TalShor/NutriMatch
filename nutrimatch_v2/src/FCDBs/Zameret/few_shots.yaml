@@ -1,0 +1,32 @@
+example_1:
+  sr_legacy:
+    origin:
+      hebrew_name: "תרד, טרי, מבושל, ללא תוספת שומן, עם מלח"
+      english_name: "Spinach, cooked, from fresh, fat not added"
+    target:
+      description: "Spinach, fresh, cooked, drained, with salt, no fat added"
+      food_category: "Vegetables and Vegetable Products"
+      common_name: "Cooked spinach"
+
+
+example_2:
+  sr_legacy:
+    origin:
+      hebrew_name: "שוקולד מריר ללא תוספת סוכר, עלית"
+      english_name: "Chocolate, dark, no added sugar, Elite"
+    target:
+      description: "Candies, dark chocolate, no added sugar"
+      food_category: "Sweets"
+      common_name: "Dark chocolate"
+
+
+example_3:
+  sr_legacy:
+    origin:
+      hebrew_name: "שניצל עוף, חזה מטוגן בשמן קנולה עם שומשום"
+      english_name: "Chicken, breast, with sesame, fried in canola oil"
+    target:
+      description: "Chicken, breast, breaded, fried in canola oil, with sesame"
+      food_category: "Poultry Products"
+      common_name: "Fried chicken with sesame"
+
