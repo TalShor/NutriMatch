@@ -3,6 +3,7 @@ import json
 import os
 import pathlib
 from itertools import count
+from pathlib import Path
 
 import openai
 import pandas as pd
@@ -20,11 +21,34 @@ from ..FCDBs.SR_legacy.dataset_structure import SR_LegacyFoodItem
 system_prompt = {
     "role": "system",
     "content": (
-        "You are a food-taxonomy expert specialising in cross-database mappings of food items.\n"
-        "For each origin item, translate it to the single most likely counterpart in the target "
-        "food-composition database based on descriptive features, aiming for nutritional values "
-        "that are as closely aligned as possible while representing the same real-world food.\n"
-        "Return the mapping using the tool below."
+        "You are an expert on the USDA SR Legacy food-composition database and international food taxonomy.\n"
+        "Your task is to map every *origin* food record (what ever the language) to the format resembling the USDA SR Legacy FCDB.\n"
+        "\n"
+        "Guidelines:\n"
+        "• Write an English description in the USDA SR Legacy *style* – i.e. include cut, preparation method, fat level, seasoning, etc. – but it does *not* have to be an exact string from the database.\n"
+        '• NEVER include brand names or marketing terms (e.g. "Elite", "Tnuva", "McDonald’s").\n'
+        "• Select the entry whose nutritional profile and real-world characteristics are the closest match.\n"
+        "• Populate the fields in the SR_LegacyFoodItem model.\n"
+        "\n"
+        "Naming rules (follow ALL):\n"
+        "  1. Capitalise the first word and every proper noun; keep generic food words lowercase unless starting the name.\n"
+        "  2. Order: base food → key qualifier(s) → extras. Example: 'Cheddar cheese (cow’s milk), 32 % fat, natural'.\n"
+        "  3. Put clarifications in parentheses.\n"
+        "  4. Separate attributes with commas; use 'and' only before the last item.\n"
+        "  5. Cooking state goes last, preferably in parentheses. Use '(raw)' for uncooked.\n"
+        "  6. Replace translation artefacts like 'ns as to …' with clear English ('part not specified').\n"
+        "  7. Prefer standard culinary English terms (whole milk, sirloin, etc.).\n"
+        "  8. Numbers: no space before %, write '3 % fat'; vitamins in capitals (B12, D, E).\n"
+        "  9. Use correct singular/plural forms.\n"
+        "  10. Avoid redundancy (e.g. 'boneless' already implies 'without bone').\n"
+        "  11. Skip brand names; shorten long flavour lists to 'assorted fruit flavours'.\n"
+        "  12. Proofread: collapse multiple spaces, trim trailing spaces, ensure readability.\n"
+        "  13. Use 'homemade' (or similar) ONLY when the source explicitly indicates it. Otherwise leave it out.\n"
+        "  14. Keep the original primary ingredient/species – never replace with an unrelated U.S. substitute. But you can replace the food item name if it's analagous to a US food item.\n"
+        "  15. Remove vague packaging words ('pack', 'package', 'jar') unless nutritionally relevant (e.g. 'oil-packed tuna').\n"
+        "  16. Assume items are commercial unless 'homemade' is explicit; use 'commercial' only when contrasting with 'homemade'.\n"
+        "  17. If the food item is not a food item, set the unlikely_food_item flag to True.\n"
+        "Return the result exclusively via the provided tool call; DO NOT output any free text."
     ),
 }
 
@@ -145,7 +169,7 @@ def get_batch_translation(
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     gpt_response = client.chat.completions.create(
-        model="o4-mini-2025-04-16",
+        model="gpt-4.1-mini-2025-04-14",
         messages=_get_batch_translation_prompt(
             batch_food_items, yaml_file_path, tool_name
         ),
@@ -183,10 +207,8 @@ def get_translation(
     data: pd.DataFrame,
     batch_size: int,
     num_threads: int = 16,
+    temp_dir: str = "temp",
 ) -> pd.DataFrame:
-
-    data = data.head(30)
-
     # Prepare the batches
     batches = [data.iloc[i : i + batch_size] for i in range(0, len(data), batch_size)]
     if not batches:
@@ -194,7 +216,25 @@ def get_translation(
 
     # Helper for the executor
     def _translate(batch_df: pd.DataFrame) -> pd.DataFrame:
-        return get_batch_translation(batch_df, few_shots_path)
+        print(f"Translating batch {batch_df.index.min()} to {batch_df.index.max()}")
+        temp_file_path = os.path.join(
+            temp_dir, f"batch_{batch_df.index.min()}_{batch_df.index.max()}.parquet"
+        )
+        if not os.path.exists(temp_file_path):
+            os.makedirs(temp_dir, exist_ok=True)
+            try:
+                df = get_batch_translation(batch_df, few_shots_path)
+                df["food_category"] = df["food_category"].apply(lambda e: e.value)
+                df.to_parquet(temp_file_path)
+                return df
+            except Exception as e:
+                raise Exception(
+                    f"Error translating batch {batch_df.index.min()} to {batch_df.index.max()} - {e}"
+                )
+        else:
+            return pd.read_parquet(temp_file_path)
+
+    # Run the batch translations concurrently instead of sequentially
 
     translations: list[pd.DataFrame] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -208,13 +248,16 @@ def get_translation(
             except Exception as exc:
                 raise RuntimeError(f"Translation failed for batch {idx}") from exc
 
-    translations = pd.concat(translations, ignore_index=True)
-    translations["food_category"] = translations["food_category"].apply(
-        lambda e: e.value
-    )
+    def _add_batch_index(p: Path) -> tuple[int, int]:
+        df = pd.read_parquet(p)
+        _, start, end = str(p.name).split(".")[0].split("_")
+        df.index = range(int(start), int(end) + 1)
+        return df
+
+    translations = [_add_batch_index(p) for p in Path(temp_dir).glob("*.parquet")]
+    translations = pd.concat(translations)
     translations = SR_LegacyFoodItem.add_fcdb_to_columns(translations)
 
-    translations.index = data.index
     # Concat the translations with the original data in the same rows - leave the data index
     data_with_translation = pd.concat([data, translations], axis=1)
     return data_with_translation

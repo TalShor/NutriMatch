@@ -25,9 +25,9 @@ PAGE_SIZE = 50_000  # the API allows up to ~100k; keep it conservative
 
 
 class ZameretDataDigestion(BaseDataDigestion):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Base class expects a data frame parameter that is unused; we pass None.
-        super().__init__(fcdb_name="Zameret")
+        super().__init__(fcdb_name="Zameret", *args, **kwargs)
 
     def download_raw_data(self) -> pd.DataFrame:
         """Fetch the dataset through the CKAN JSON API and convert to DataFrame."""

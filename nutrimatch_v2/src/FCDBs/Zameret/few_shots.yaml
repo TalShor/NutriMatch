@@ -6,7 +6,7 @@ example_1:
     target:
       description: "Spinach, fresh, cooked, drained, with salt, no fat added"
       food_category: "Vegetables and Vegetable Products"
-      common_name: "Cooked spinach"
+
 
 
 example_2:
@@ -17,7 +17,6 @@ example_2:
     target:
       description: "Candies, dark chocolate, no added sugar"
       food_category: "Sweets"
-      common_name: "Dark chocolate"
 
 
 example_3:
@@ -28,5 +27,55 @@ example_3:
     target:
       description: "Chicken, breast, breaded, fried in canola oil, with sesame"
       food_category: "Poultry Products"
-      common_name: "Fried chicken with sesame"
+
+
+example_4:
+  sr_legacy:
+    origin:
+      hebrew_name: "בשר בקר מיובש"
+      english_name: "Beef, dried (jerky)"
+    target:
+      description: "Beef, cured, dried, jerky"
+      food_category: "Beef Products"
+      common_name: "Beef jerky"
+
+example_5:
+  sr_legacy:
+    origin:
+      hebrew_name: "בשר עוף, חזה במרינדה, בגריל, מאמא עוף"
+      english_name: "Chicken, breast, marinated, grilled"
+    target:
+      description: "Chicken, breast, grilled, marinated"
+      food_category: "Poultry Products"
+      common_name: "Grilled chicken breast"
+
+example_6:
+  sr_legacy:
+    origin:
+      hebrew_name: "דג ורדון רוטבש, לא מבושל"
+      english_name: "Fish, ocean perch, raw"
+    target:
+      description: "Fish, ocean perch, raw"
+      food_category: "Finfish and Shellfish Products"
+      common_name: "Raw ocean perch"
+
+example_7:
+  sr_legacy:
+    origin:
+      hebrew_name: "המבורגר קריספי צ'יקן קטן, בלחמניה, מקדונלדס"
+      english_name: "Chicken sandwich, crispy, with roll"
+    target:
+      description: "Chicken sandwich, crispy, with roll"
+      food_category: "Fast Foods"
+      common_name: "Crispy chicken sandwich"
+
+example_8:
+  sr_legacy:
+    origin:
+      hebrew_name: "וואט עוף וביצים אתיופי"
+      english_name: "Chicken and eggs wat, Ethiopian dish"
+    target:
+      description: "Chicken and eggs wat, Ethiopian dish"
+      food_category: "Meals, Entrees, and Side Dishes"
+      common_name: "Chicken and eggs wat"
 
