@@ -1,3 +1,4 @@
+import re
 from typing import List, Literal, Type
 
 import numpy as np
@@ -61,41 +62,31 @@ class FoodItem(BaseModel):
         if str_validation is None:
             return str_validation
 
-        str_validation = (
-            str_validation.replace("\n", "")
+        cleaned_str = re.sub(r"[\,]+", ",", str_validation)
+        cleaned_str = re.sub(r"[\.]+", ".", cleaned_str)
+        cleaned_str = (
+            cleaned_str.replace("\n", "")
             .replace("\t", " ")
             .replace("-", " ")
-            .strip()
-            .lower()
             .replace("\\", " ")
             .replace("/", " ")
-            .replace("  ", " ")
-            .replace('":', "")
-            .replace(",", " ")
+            .replace(",", ", ")
+            .replace(".", ". ")
+            .replace(":", " ")
+            .strip()
+            .lower()
         )
+        cleaned_str = re.sub(r"\s+", " ", cleaned_str)
 
         # no words over 20 characters
-        if any(len(word) > 20 for word in str_validation.split()):
+        if any(len(word) > 20 for word in cleaned_str.split()):
             print("no words over 20 characters")
             return None
 
-        cleared = (
-            str_validation.replace(",", "")
-            .replace('"', "")
-            .replace("'", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("\t", "")
-            .replace(" ", "")
-            .replace('":', "")
-            .replace("_", "")
-            .replace("/", " ")
-            .strip()
-        )
-        if len(cleared) < 2 or len(cleared) > 200:
+        if len(cleaned_str) < 2 or len(cleaned_str) > 200:
             print(
-                f"description must be between 2 and 200 characters for the word {cleared}"
+                f"description must be between 2 and 200 characters for the word {str_validation} -> {cleaned_str}"
             )
             return None
 
-        return str_validation
+        return cleaned_str

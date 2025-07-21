@@ -2,6 +2,8 @@ import os
 
 import pandas as pd
 
+from ..FCDBs.SR_legacy.dataset_structure import SR_LegacyFoodItem
+from ..FCDBs.Zameret.dataset_structure import ZameretFoodItem
 from ..gpt_tools.translation import get_translation
 
 
@@ -18,6 +20,13 @@ class BaseDataDigestion:
         self.batch_size = batch_size
         self.num_threads = num_threads
 
+        if fcdb_name == "SR_legacy":
+            self.food_item_class: type[SR_LegacyFoodItem] = SR_LegacyFoodItem
+        elif fcdb_name == "Zameret":
+            self.food_item_class: type[ZameretFoodItem] = ZameretFoodItem
+        else:
+            raise ValueError(f"Invalid FCDB name: {fcdb_name}")
+
         # Prepare output directory structure (one folder per FCDB).
         self.data_base_dir = f"data/FCDBs/{fcdb_name}"
         self.code_base_dir = f"src/FCDBs/{fcdb_name}"
@@ -26,7 +35,8 @@ class BaseDataDigestion:
 
         # Ensure GPTData directory exists early so downstream code can rely on it.
         self.gpt_data_dir = os.path.join(self.data_base_dir, "GPTData")
-        os.makedirs(self.gpt_data_dir, exist_ok=True)
+        self.translate_temp_dir = os.path.join(self.gpt_data_dir, "translate_temp")
+        os.makedirs(self.translate_temp_dir, exist_ok=True)
 
         # ------------------------------------------------------------------
         # 1. Download → cache raw data
@@ -66,6 +76,9 @@ class BaseDataDigestion:
         # ------------------------------------------------------------------
         # 4. GPT translation (cached)
         # ------------------------------------------------------------------
+
+        # TODO: check if it's SR_Legacy - do something else.
+
         if not os.path.exists(
             os.path.join(self.gpt_data_dir, "translated_data.parquet")
         ):
@@ -88,9 +101,18 @@ class BaseDataDigestion:
 
     def translate_data(self) -> pd.DataFrame:
         """Translate the standardised data using GPT."""
+
+        # Keep only relevant columns for translation.
+        relevant_columns = self.food_item_class.fooditems2df(
+            self.food_item_class.df2fooditems(self.standardised_data)
+        ).drop(columns=["unlikely_food_item", "food_item_discrepancy"], errors="ignore")
+
+        # relevant_columns = relevant_columns.head(1000)
+
         return get_translation(
             self.few_shot_path,
-            self.standardised_data,
+            relevant_columns,
             self.batch_size,
             num_threads=self.num_threads,
+            temp_dir=self.translate_temp_dir,
         )

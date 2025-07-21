@@ -8,9 +8,9 @@ from ...base_classes.base_data_digestion import BaseDataDigestion
 
 
 class SR_LegacyDataDigestion(BaseDataDigestion):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # The base class handles downloading and saving.  Pass the FCDB name.
-        super().__init__(fcdb_name="SR_legacy")
+        super().__init__(fcdb_name="SR_legacy", *args, **kwargs)
 
     def download_raw_data(self) -> pd.DataFrame:
         url = (

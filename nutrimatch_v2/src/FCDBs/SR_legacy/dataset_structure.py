@@ -41,10 +41,11 @@ class USDA_diet_categories(Enum):
 class SR_LegacyFoodItem(FoodItem):
     description: str = Field(
         ...,
-        description="The name of the food item in English. Remove brand names and other non-descriptive words. e.g. 'Coca Cola' should be 'Cola'.",
+        description="An English description written in the USDA SR Legacy style (include preparation method, fat content, qualifiers, etc.) – it does *not* have to be an exact string from the database but should match the CLOSEST equivalent food item familiar in the United States *with the same core ingredients* (e.g. chicken schnitzel → fried chicken). All brand or marketing terms must be omitted.",
     )
     food_category: USDA_diet_categories = Field(
-        ..., description="The category of the food item in English."
+        ...,
+        description="USDA food category of the item. Must match one value from USDA_diet_categories exactly.",
     )
     unique_food_column: ClassVar[str] = "description"
 
