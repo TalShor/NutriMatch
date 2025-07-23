@@ -209,6 +209,10 @@ def get_translation(
     num_threads: int = 16,
     temp_dir: str = "temp",
 ) -> pd.DataFrame:
+
+    # shouldn't have an index
+    data = data.reset_index(drop=True)
+
     # Prepare the batches
     batches = [data.iloc[i : i + batch_size] for i in range(0, len(data), batch_size)]
     if not batches:
@@ -249,9 +253,15 @@ def get_translation(
                 raise RuntimeError(f"Translation failed for batch {idx}") from exc
 
     def _add_batch_index(p: Path) -> tuple[int, int]:
-        df = pd.read_parquet(p)
-        _, start, end = str(p.name).split(".")[0].split("_")
-        df.index = range(int(start), int(end) + 1)
+        try:
+            df = pd.read_parquet(p)
+            _, start, end = str(p.name).split(".")[0].split("_")
+            df.index = range(int(start), int(end) + 1)
+        except Exception as e:
+            print(
+                f"Error reading parquet file {p} - {e}: len(df) = {len(df)}, len(range) = {len(range(int(start), int(end) + 1))}"
+            )
+            raise e
         return df
 
     translations = [_add_batch_index(p) for p in Path(temp_dir).glob("*.parquet")]

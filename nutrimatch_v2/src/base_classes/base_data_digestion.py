@@ -4,6 +4,7 @@ import pandas as pd
 
 from ..FCDBs.SR_legacy.dataset_structure import SR_LegacyFoodItem
 from ..FCDBs.Zameret.dataset_structure import ZameretFoodItem
+from ..gpt_tools.embeddings import get_batch_embedding
 from ..gpt_tools.translation import get_translation
 
 
@@ -91,6 +92,19 @@ class BaseDataDigestion:
                 os.path.join(self.gpt_data_dir, "translated_data.parquet")
             )
 
+        # ------------------------------------------------------------------
+        # 5. Embeddings
+        # ------------------------------------------------------------------
+        if not os.path.exists(os.path.join(self.gpt_data_dir, "embeddings.parquet")):
+            self.embeddings: pd.DataFrame = self.get_embeddings()
+            self.embeddings.to_parquet(
+                os.path.join(self.gpt_data_dir, "embeddings.parquet")
+            )
+        else:
+            self.embeddings: pd.DataFrame = pd.read_parquet(
+                os.path.join(self.gpt_data_dir, "embeddings.parquet")
+            )
+
     def download_raw_data(self) -> pd.DataFrame:
         """Retrieve the raw dataset and return it as a DataFrame."""
         raise NotImplementedError
@@ -102,17 +116,70 @@ class BaseDataDigestion:
     def translate_data(self) -> pd.DataFrame:
         """Translate the standardised data using GPT."""
 
-        # Keep only relevant columns for translation.
-        relevant_columns = self.food_item_class.fooditems2df(
-            self.food_item_class.df2fooditems(self.standardised_data)
-        ).drop(columns=["unlikely_food_item", "food_item_discrepancy"], errors="ignore")
+        # Keep only relevant columns / rows for translation.
+        relevant_df = self.food_item_class.get_fields_only_df(self.standardised_data)
 
         # relevant_columns = relevant_columns.head(1000)
 
-        return get_translation(
+        translated_df = get_translation(
             self.few_shot_path,
-            relevant_columns,
+            relevant_df,
             self.batch_size,
             num_threads=self.num_threads,
             temp_dir=self.translate_temp_dir,
         )
+
+        # A long way to keep the original values while not failing the translation.
+        copy_standardised_data = self.standardised_data.copy()
+        full_df = pd.concat(
+            [
+                copy_standardised_data,
+                self.food_item_class.get_fields_only_df(
+                    copy_standardised_data, keep_na=True
+                ).rename(
+                    columns={
+                        col: col + "_translated"
+                        for col in copy_standardised_data.columns
+                    }
+                ),
+            ],
+            axis=1,
+        )
+        full_df = full_df.merge(
+            translated_df.rename(
+                columns={
+                    col: col + "_translated"
+                    for col in translated_df.columns
+                    if not col.endswith("_SR_LegacyFoodItem")
+                }
+            ),
+            how="outer",
+        )
+
+        # remove _translated columns
+        full_df = full_df.drop(
+            columns=[col for col in full_df.columns if col.endswith("_translated")]
+        )
+
+        return full_df
+
+    def get_embeddings(self) -> pd.DataFrame:
+        """Get the embeddings for the translated data."""
+        only_sr_columns = (
+            self.translated_data.filter(regex="_SR_LegacyFoodItem$")
+            .rename(
+                columns={
+                    col: col.replace("_SR_LegacyFoodItem", "")
+                    for col in self.translated_data.columns
+                }
+            )
+            .dropna()
+        )
+
+        only_sr_columns = SR_LegacyFoodItem.df2fooditems(only_sr_columns)
+
+        only_sr_columns = get_batch_embedding(
+            only_sr_columns, num_threads=self.num_threads
+        )
+        self.translated_data["embedding"] = only_sr_columns
+        return self.translated_data
