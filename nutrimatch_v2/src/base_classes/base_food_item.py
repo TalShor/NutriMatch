@@ -55,6 +55,31 @@ class FoodItem(BaseModel):
         return pd.DataFrame(data)
 
     @classmethod
+    def get_fields_only_df(
+        cls: Type["FoodItem"], df: pd.DataFrame, keep_na: bool = False
+    ) -> pd.DataFrame:
+        """
+        This function is used to get the fields only from the dataframe.
+        It is used to get the fields only from the dataframe.
+        If the row is not valid - drop it.
+        """
+        only_fields_df = cls.df2fooditems(df)
+        only_fields_df = cls.fooditems2df(only_fields_df)
+        # if any of the required fields are not in the df - drop the row
+        # if they are Optional - ignore them
+        # if they are not Optional - drop the row
+        if not keep_na:
+            for field in cls.model_fields.keys():
+                if cls.model_fields[field].is_required():
+                    only_fields_df = only_fields_df[only_fields_df[field].notna()]
+
+            only_fields_df = only_fields_df.drop(
+                columns=["unlikely_food_item", "food_item_discrepancy"], errors="ignore"
+            )
+
+        return only_fields_df
+
+    @classmethod
     def add_fcdb_to_columns(cls: Type["FoodItem"], df: pd.DataFrame) -> pd.DataFrame:
         return df.rename(columns={col: f"{col}_{cls.__name__}" for col in df.columns})
 

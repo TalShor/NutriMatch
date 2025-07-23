@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run digest_FCDB (Zameret)",
+            "type": "python",
+            "request": "launch",
+            // Path to the script inside the nutrimatch_v2 package
+            "program": "${workspaceFolder}/nutrimatch_v2/digest_FCDB.py",
+            // Arguments to pass to the script
+            "args": [
+                "--fcdb",
+                "Zameret",
+                "--num_threads",
+                "16"
+            ],
+            // Run from the nutrimatch_v2 directory so relative paths resolve correctly
+            "cwd": "${workspaceFolder}/nutrimatch_v2",
+            // Show output in VS Code's integrated terminal
+            "console": "integratedTerminal",
+            // Include library code in the debugger
+            "justMyCode": false
+        }
+    ]
+}
