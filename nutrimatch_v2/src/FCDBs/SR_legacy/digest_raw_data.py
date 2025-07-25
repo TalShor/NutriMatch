@@ -10,7 +10,7 @@ from ...base_classes.base_data_digestion import BaseDataDigestion
 class SR_LegacyDataDigestion(BaseDataDigestion):
     def __init__(self, *args, **kwargs):
         # The base class handles downloading and saving.  Pass the FCDB name.
-        super().__init__(fcdb_name="SR_legacy", *args, **kwargs)
+        super().__init__(fcdb_name="SR_Legacy", *args, **kwargs)
 
     def download_raw_data(self) -> pd.DataFrame:
         url = (
@@ -30,13 +30,17 @@ class SR_LegacyDataDigestion(BaseDataDigestion):
 
             # 3. read it directly into pandas
             with z.open(json_name) as f:
-                df = pd.read_json(f)["SRLegacyFoods"].apply(pd.Series)
-                df["foodCategory"] = df.foodCategory.apply(pd.Series)["description"]
+                df = (
+                    pd.read_json(f)["SRLegacyFoods"]
+                    .apply(pd.Series)
+                    .rename(columns={"foodCategory": "food_category"})
+                )
+                df["food_category"] = df.food_category.apply(pd.Series)["description"]
                 return df
 
     def standardise_data(self) -> pd.DataFrame:
         nutrients_table = (
-            self.raw_data.set_index(["description", "foodCategory"])["foodNutrients"]
+            self.raw_data.set_index(["description", "food_category"])["foodNutrients"]
             .explode()
             .apply(pd.Series)
         )
@@ -45,5 +49,5 @@ class SR_LegacyDataDigestion(BaseDataDigestion):
         )
 
         return nutrients_table.reset_index().pivot_table(
-            index=["description", "foodCategory"], values="amount", columns="name"
+            index=["description", "food_category"], values="amount", columns="name"
         )
