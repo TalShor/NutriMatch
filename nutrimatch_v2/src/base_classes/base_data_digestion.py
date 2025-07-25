@@ -1,4 +1,5 @@
 import os
+from typing import Callable
 
 import pandas as pd
 
@@ -6,6 +7,8 @@ from ..FCDBs.SR_legacy.dataset_structure import SR_LegacyFoodItem
 from ..FCDBs.Zameret.dataset_structure import ZameretFoodItem
 from ..gpt_tools.embeddings import get_batch_embedding
 from ..gpt_tools.translation import get_translation
+
+SR_Legacy_name = "SR_Legacy"
 
 
 class BaseDataDigestion:
@@ -16,12 +19,20 @@ class BaseDataDigestion:
     currently unused by the base implementation.
     """
 
+    def __save_data(self, path: str, create_func: Callable):
+        if not os.path.exists(path):
+            data = create_func()
+            data.to_parquet(path)
+            return data
+        return pd.read_parquet(path)
+
     def __init__(self, fcdb_name: str, batch_size: int = 50, num_threads: int = 16):
 
         self.batch_size = batch_size
         self.num_threads = num_threads
+        self.fcdb_name = fcdb_name
 
-        if fcdb_name == "SR_legacy":
+        if fcdb_name == SR_Legacy_name:
             self.food_item_class: type[SR_LegacyFoodItem] = SR_LegacyFoodItem
         elif fcdb_name == "Zameret":
             self.food_item_class: type[ZameretFoodItem] = ZameretFoodItem
@@ -42,68 +53,58 @@ class BaseDataDigestion:
         # ------------------------------------------------------------------
         # 1. Download → cache raw data
         # ------------------------------------------------------------------
-        if not os.path.exists(os.path.join(self.raw_data_dir, "raw_data.parquet")):
-            self.raw_data: pd.DataFrame = self.download_raw_data()
-            self.raw_data.to_parquet(
-                os.path.join(self.raw_data_dir, "raw_data.parquet")
-            )
-        else:
-            self.raw_data: pd.DataFrame = pd.read_parquet(
-                os.path.join(self.raw_data_dir, "raw_data.parquet")
-            )
+        self.raw_data = self.__save_data(
+            os.path.join(self.raw_data_dir, "raw_data.parquet"), self.download_raw_data
+        )
 
         # ------------------------------------------------------------------
         # 2. Standardise → cache standardised data
         # ------------------------------------------------------------------
-        if not os.path.exists(
-            os.path.join(self.raw_data_dir, "standardised_data.parquet")
-        ):
-            self.standardised_data: pd.DataFrame = self.standardise_data()
-            self.standardised_data.to_parquet(
-                os.path.join(self.raw_data_dir, "standardised_data.parquet")
-            )
-        else:
-            self.standardised_data: pd.DataFrame = pd.read_parquet(
-                os.path.join(self.raw_data_dir, "standardised_data.parquet")
-            )
+        self.standardised_data = self.__save_data(
+            os.path.join(self.raw_data_dir, "standardised_data.parquet"),
+            self.standardise_data,
+        )
 
         # ------------------------------------------------------------------
         # 3. Few-shot examples – must be present for GPT translation
         # ------------------------------------------------------------------
         self.few_shot_path = os.path.join(self.code_base_dir, "few_shots.yaml")
-        if not os.path.exists(self.few_shot_path):
+        if (self.fcdb_name != SR_Legacy_name) and not os.path.exists(
+            self.few_shot_path
+        ):
             raise FileNotFoundError(f"Few shot file not found at {self.few_shot_path}")
 
         # ------------------------------------------------------------------
-        # 4. GPT translation (cached)
+        # 4. GPT translation
         # ------------------------------------------------------------------
 
-        # TODO: check if it's SR_Legacy - do something else.
+        # If it's SR_Legacy, we need don't need to run translation - just copy the columns with a suffix.
+        def sr_legacy_translation():
+            df = self.standardised_data.copy().reset_index()
+            df = pd.concat(
+                [
+                    df,
+                    SR_LegacyFoodItem.add_fcdb_to_columns(df),
+                ],
+                axis=1,
+            )
+            return df
 
-        if not os.path.exists(
-            os.path.join(self.gpt_data_dir, "translated_data.parquet")
-        ):
-            self.translated_data: pd.DataFrame = self.translate_data()
-            self.translated_data.to_parquet(
-                os.path.join(self.gpt_data_dir, "translated_data.parquet")
-            )
-        else:
-            self.translated_data: pd.DataFrame = pd.read_parquet(
-                os.path.join(self.gpt_data_dir, "translated_data.parquet")
-            )
+        self.translation = self.__save_data(
+            os.path.join(self.gpt_data_dir, "translation.parquet"),
+            (
+                sr_legacy_translation
+                if self.fcdb_name == SR_Legacy_name
+                else self.translate_data
+            ),
+        )
 
         # ------------------------------------------------------------------
         # 5. Embeddings
         # ------------------------------------------------------------------
-        if not os.path.exists(os.path.join(self.gpt_data_dir, "embeddings.parquet")):
-            self.embeddings: pd.DataFrame = self.get_embeddings()
-            self.embeddings.to_parquet(
-                os.path.join(self.gpt_data_dir, "embeddings.parquet")
-            )
-        else:
-            self.embeddings: pd.DataFrame = pd.read_parquet(
-                os.path.join(self.gpt_data_dir, "embeddings.parquet")
-            )
+        self.embeddings = self.__save_data(
+            os.path.join(self.gpt_data_dir, "embeddings.parquet"), self.get_embeddings
+        )
 
     def download_raw_data(self) -> pd.DataFrame:
         """Retrieve the raw dataset and return it as a DataFrame."""
@@ -165,21 +166,19 @@ class BaseDataDigestion:
 
     def get_embeddings(self) -> pd.DataFrame:
         """Get the embeddings for the translated data."""
-        only_sr_columns = (
-            self.translated_data.filter(regex="_SR_LegacyFoodItem$")
-            .rename(
-                columns={
-                    col: col.replace("_SR_LegacyFoodItem", "")
-                    for col in self.translated_data.columns
-                }
-            )
-            .dropna()
+
+        only_sr_columns = self.translation.filter(regex="_SR_LegacyFoodItem$").rename(
+            columns={
+                col: col.replace("_SR_LegacyFoodItem", "")
+                for col in self.translation.columns
+            }
         )
 
+        print(only_sr_columns.head())
         only_sr_columns = SR_LegacyFoodItem.df2fooditems(only_sr_columns)
 
         only_sr_columns = get_batch_embedding(
             only_sr_columns, num_threads=self.num_threads
         )
-        self.translated_data["embedding"] = only_sr_columns
-        return self.translated_data
+        self.translation["embedding"] = only_sr_columns
+        return self.translation

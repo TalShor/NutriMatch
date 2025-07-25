@@ -23,4 +23,4 @@ if __name__ == "__main__":
     args = parse_args()
     data_digestion_class = get_data_digestion_class(args.fcdb)
     data_class = data_digestion_class(num_threads=args.num_threads)
-    print(data_class.translated_data)
+    print(data_class.embeddings)

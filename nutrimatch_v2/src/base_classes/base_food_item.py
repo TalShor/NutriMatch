@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 from typing import List, Literal, Type
 
 import numpy as np
@@ -32,6 +33,11 @@ class FoodItem(BaseModel):
         required_attrs = np.setdiff1d(
             required_attrs, list(FoodItem.model_fields.keys())
         )
+
+        print("cols")
+        print(df.columns)
+        print(required_attrs)
+
         if df.columns.intersection(required_attrs).size != len(required_attrs):
             raise ValueError(
                 f"DataFrame does not contain all the required attributes for {cls}."
@@ -56,7 +62,10 @@ class FoodItem(BaseModel):
 
     @classmethod
     def get_fields_only_df(
-        cls: Type["FoodItem"], df: pd.DataFrame, keep_na: bool = False
+        cls: Type["FoodItem"],
+        df: pd.DataFrame,
+        keep_na: bool = False,
+        replace_enum_to_value: bool = False,
     ) -> pd.DataFrame:
         """
         This function is used to get the fields only from the dataframe.
@@ -65,9 +74,7 @@ class FoodItem(BaseModel):
         """
         only_fields_df = cls.df2fooditems(df)
         only_fields_df = cls.fooditems2df(only_fields_df)
-        # if any of the required fields are not in the df - drop the row
-        # if they are Optional - ignore them
-        # if they are not Optional - drop the row
+
         if not keep_na:
             for field in cls.model_fields.keys():
                 if cls.model_fields[field].is_required():
@@ -76,6 +83,14 @@ class FoodItem(BaseModel):
             only_fields_df = only_fields_df.drop(
                 columns=["unlikely_food_item", "food_item_discrepancy"], errors="ignore"
             )
+
+        if replace_enum_to_value:
+            for field in cls.model_fields.keys():
+                annotation = cls.model_fields[field].annotation
+                if isinstance(annotation, type) and issubclass(annotation, Enum):
+                    only_fields_df[field] = only_fields_df[field].apply(
+                        lambda x: x.value
+                    )
 
         return only_fields_df
 
