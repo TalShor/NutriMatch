@@ -10,7 +10,6 @@ It returns the *same* DataFrame with two extra columns:
 * ``nutritionally_equivalent`` – ``bool`` – GPT judgement whether the two
   records can be considered nutritionally exchangeable *given their main
   ingredients *and* cooking / preparation method*.
-* ``equivalence_reason`` – ``str`` – a short human-readable justification.
 
 Usage example
 -------------
@@ -22,9 +21,9 @@ Usage example
 ...     "item_b": [json.dumps({"name": "Baked potato", "weight_g": 150})],
 ... })
 >>> out = compare_dataframe(df)
->>> out[["nutritionally_equivalent", "equivalence_reason"]]
-   nutritionally_equivalent                equivalence_reason
-0                     True  Very similar macronutrient profile
+>>> out[["nutritionally_equivalent"]]
+    nutritionally_equivalent
+0                     True
 ```
 
 The heavy lifting is done by OpenAI GPT-4 (or a compatible model) via the
@@ -48,22 +47,21 @@ from tenacity import (
 )
 
 # ---------------------------------------------------------------------------
-# Prompt engineering helpers
+# NEW concise system prompt
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT: dict = {
     "role": "system",
     "content": (
-        "You are a registered dietician specialising in food-composition tables\n"
-        "and culinary techniques.  When given *pairs* of food-item records you\n"
-        "must decide whether the two foods are **nutritionally equivalent**,\n"
-        "meaning a typical serving of one can replace the other in a diet plan\n"
-        "without materially changing energy, macronutrient balance, or major\n"
-        "micronutrients.  Consider not only ingredients but also cooking or\n"
-        "processing method (fried vs. boiled, raw vs. roasted, etc.).\n\n"
-        "Return your judgement *exclusively* via the provided tool call; do NOT\n"
-        "output any free-text.  Base your decision on common dietetic\n"
-        "knowledge – no sourcing is required in the answer."
+        "You are a dietician. For each food-item *pair*, decide whether they are **nutritionally similar** – i.e. a typical serving of one can replace the other without meaningful change (≈ ≤ 10 % difference) in calories, macronutrients, or key micronutrients.\n\n"
+        "Processing state matters: raw, cooked, frozen, canned, dried, fermented, etc.  Different states are generally NOT nutritionally similar unless nutrient values still fall within the 10 % tolerance.\n\n"
+        "Regard the items as the *same* when differences are purely cosmetic (macros still within the 10 % band), for example: \n"
+        "• word order, punctuation, capitalisation, singular/plural, hyphenation\n"
+        "• synonyms, generic category words, or small morphological variants (e.g. ‘malt’ vs ‘malted’, ‘uncooked’ vs ‘unprepared’)\n"
+        "• explanatory text in parentheses or variety/cultivar notes (e.g. ‘includes crisphead types’)\n"
+        "• negligible ingredients such as skin, glaze, seasoning, or ‘commercially prepared’ qualifiers\n\n"
+        "DO NOT treat items as similar when the preparation/processing state changes nutrients beyond tolerance – e.g. raw vs cooked, raw vs frozen, sweetened vs unsweetened, or cocoa-solid ranges that imply >10 % change.\n\n"
+        "Reply **exclusively** with the provided function call – no free text."
     ),
 }
 
@@ -73,7 +71,7 @@ class PairJudgement(BaseModel):
 
     nutritionally_equivalent: bool = Field(
         ...,
-        description="True if the two items can be swapped without changing the overall nutritional profile in most dietetic contexts.",
+        description="True when the two items are nutritionally similar as defined in the system prompt (≈ ≤ 5 % difference in energy/macros/micros).",
     )
 
 
@@ -85,17 +83,193 @@ class PairJudgement(BaseModel):
 def _build_prompt(batch_df: pd.DataFrame, tool_name: str) -> List[dict]:
     """Compose the chat prompt for the current batch."""
 
-    # Serialise the records as a list of dicts -> [{"item_a": {...}, "item_b": {...}}, …]
+    prompt: List[dict] = [_SYSTEM_PROMPT]
+
+    # -------------------------------------------------------------------
+    # Few-shot examples to prime the model
+    # -------------------------------------------------------------------
+    few_shots = [
+        (
+            {
+                "description": "granola bar, chocolate coated, with coconut",
+                "food_category": "Snacks",
+            },
+            {
+                "description": "snacks, granola bar, with coconut, chocolate coated",
+                "food_category": "Snacks",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "barley flour, malted",
+                "food_category": "Cereal Grains and Pasta",
+            },
+            {
+                "description": "barley malt flour",
+                "food_category": "Cereal Grains and Pasta",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "peas, green, raw",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            {
+                "description": "green peas, raw, frozen",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            False,
+        ),
+        (
+            {
+                "description": "nuts, almonds, oil roasted, with salt added",
+                "food_category": "Nut and Seed Products",
+            },
+            {
+                "description": "almonds, roasted, salted",
+                "food_category": "Nut and Seed Products",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "cucumber, with peel, raw",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            {
+                "description": "cucumber, raw, without peel",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "alcoholic beverage, wine, table, red",
+                "food_category": "Beverages",
+            },
+            {"description": "wine, table, red", "food_category": "Alcoholic Beverages"},
+            True,
+        ),
+        (
+            {
+                "description": "goose, domesticated, meat and skin, cooked, roasted",
+                "food_category": "Poultry Products",
+            },
+            {
+                "description": "goose, domesticated, meat and skin, raw",
+                "food_category": "Poultry Products",
+            },
+            False,
+        ),
+        (
+            {
+                "description": "chocolate, dark, 70 85% cacao solids",
+                "food_category": "Sweets",
+            },
+            {
+                "description": "chocolate, dark, 60 69% cacao solids",
+                "food_category": "Sweets",
+            },
+            False,
+        ),
+        (
+            {
+                "description": "cauliflower, frozen, unprepared",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            {
+                "description": "cauliflower, frozen, uncooked",
+                "food_category": "Vegetables and Vegetable Products",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "raspberries, frozen, red, sweetened",
+                "food_category": "Fruits and Fruit Juices",
+            },
+            {
+                "description": "raspberries, frozen, sweetened",
+                "food_category": "Fruits and Fruit Juices",
+            },
+            True,
+        ),
+        (
+            {
+                "description": "bread, whole wheat, commercially prepared, toasted",
+                "food_category": "Baked Products",
+            },
+            {
+                "description": "bread, whole wheat, toasted",
+                "food_category": "Baked Products",
+            },
+            True,
+        ),
+    ]
+
+    for idx, (item_a, item_b, is_equiv) in enumerate(few_shots, start=1):
+        example_payload = [{"item_a": item_a, "item_b": item_b}]
+        tool_id = f"example_{idx}"
+
+        # User message with the example pair
+        prompt.append(
+            {
+                "role": "user",
+                "content": (
+                    "For each element decide nutritional similarity. JSON list:\n"
+                    f"{json.dumps(example_payload, ensure_ascii=False)}"
+                ),
+            }
+        )
+
+        # Assistant message calling the function tool
+        prompt.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(
+                                {"judgements": [{"nutritionally_equivalent": is_equiv}]}
+                            ),
+                        },
+                    }
+                ],
+            }
+        )
+
+        # Matching tool response message (required by OpenAI)
+        prompt.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_id,
+                "content": json.dumps(
+                    {"judgements": [{"nutritionally_equivalent": is_equiv}]}
+                ),
+            }
+        )
+
+    # -------------------------------------------------------------------
+    # Actual user batch
+    # -------------------------------------------------------------------
     payload = batch_df.to_dict(orient="records")
     user_msg = {
         "role": "user",
         "content": (
             "For every element in the JSON list decide if *item_a* and *item_b*\n"
-            "are nutritionally equivalent.  Reply ONLY via the tool call.\n\n"
+            "are nutritionally similar (see guidelines above).  Reply ONLY via the tool call.\n\n"
             f"JSON list:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
         ),
     }
-    return [_SYSTEM_PROMPT, user_msg]
+
+    prompt.append(user_msg)
+    return prompt
 
 
 @retry(
@@ -123,7 +297,7 @@ def _query_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
 
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # small, cost-effective model – adjust as needed
+        model="gpt-4.1-mini-2025-04-14",  # small, cost-effective model – adjust as needed
         messages=_build_prompt(batch_df, tool_name),
         tools=[tool_spec],
         tool_choice="auto",
@@ -176,7 +350,7 @@ def compare_dataframe(
     -------
     pd.DataFrame
         The input dataframe *augmented* with ``nutritionally_equivalent``
-        (bool) and ``equivalence_reason`` (str) columns.
+        (bool) column.
     """
 
     if col_item_a is None or col_item_b is None:
@@ -221,5 +395,4 @@ def compare_dataframe(
     # Merge-back preserving original row order
     out = df.copy()
     out["nutritionally_equivalent"] = comparison_df["nutritionally_equivalent"]
-    out["equivalence_reason"] = comparison_df["reason"]
     return out
