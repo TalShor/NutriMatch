@@ -53,15 +53,10 @@ from tenacity import (
 _SYSTEM_PROMPT: dict = {
     "role": "system",
     "content": (
-        "You are a dietician. For each food-item *pair*, decide whether they are **nutritionally similar** – i.e. a typical serving of one can replace the other without meaningful change (≈ ≤ 10 % difference) in calories, macronutrients, or key micronutrients.\n\n"
-        "Processing state matters: raw, cooked, frozen, canned, dried, fermented, etc.  Different states are generally NOT nutritionally similar unless nutrient values still fall within the 10 % tolerance.\n\n"
-        "Regard the items as the *same* when differences are purely cosmetic (macros still within the 10 % band), for example: \n"
-        "• word order, punctuation, capitalisation, singular/plural, hyphenation\n"
-        "• synonyms, generic category words, or small morphological variants (e.g. ‘malt’ vs ‘malted’, ‘uncooked’ vs ‘unprepared’)\n"
-        "• explanatory text in parentheses or variety/cultivar notes (e.g. ‘includes crisphead types’)\n"
-        "• negligible ingredients such as skin, glaze, seasoning, or ‘commercially prepared’ qualifiers\n\n"
-        "DO NOT treat items as similar when the preparation/processing state changes nutrients beyond tolerance – e.g. raw vs cooked, raw vs frozen, sweetened vs unsweetened, or cocoa-solid ranges that imply >10 % change.\n\n"
-        "Reply **exclusively** with the provided function call – no free text."
+        "You are a dietician. For each food-item *pair*, decide whether they are **nutritionally similar** – swapping one for the other should not change calories, macronutrients, or key micronutrients by more than ≈10 %.\n\n"
+        "Focus on two factors: (1) the main ingredients, (2) the cooking / preparation method.  If both align, treat the items as similar; otherwise, they are different.\n\n"
+        "Ignore wording quirks (order, punctuation, singular/plural, synonyms) that do not affect nutrition.\n\n"
+        "Reply **only** with the required function call – no extra text."
     ),
 }
 

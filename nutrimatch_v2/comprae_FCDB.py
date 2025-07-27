@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     # get the SR Legacy columns for both of them before the comparison.
 
-    top_n_matches_1in2 = top_n_matches_1in2.head(5000)
+    top_n_matches_1in2 = top_n_matches_1in2.tail(10000)
 
     # compare the top 5 matches with GPT
     top_n_matches_1in2_boolean = compare_dataframe(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     )
 
     top_n_matches_1in2_boolean.to_parquet(
-        f"{comparison_dir}/top_n_matches_1in2_boolean.parquet"
+        f"{comparison_dir}/top_n_matches_{args.fcdb1}_{args.fcdb2}_with_decision.parquet"
     )
 
     print(top_n_matches_1in2_boolean)

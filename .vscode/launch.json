@@ -15,7 +15,9 @@
                 "--fcdb1",
                 "SR_Legacy",
                 "--fcdb2",
-                "Zameret"
+                "Zameret",
+                "--batch_size",
+                "250"
             ],
             // Run from the nutrimatch_v2 directory so relative paths resolve correctly
             "cwd": "${workspaceFolder}/nutrimatch_v2",
