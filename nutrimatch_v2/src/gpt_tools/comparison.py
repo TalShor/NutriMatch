@@ -391,3 +391,281 @@ def compare_dataframe(
     out = df.copy()
     out["nutritionally_equivalent"] = comparison_df["nutritionally_equivalent"]
     return out
+
+
+# ---------------------------------------------------------------------------
+# NEW helper – pick the closest match among *n* candidates
+# ---------------------------------------------------------------------------
+
+# Concise system prompt for *selection* task (reference vs. candidates)
+_SYSTEM_PROMPT_SELECT: dict = {
+    "role": "system",
+    "content": (
+        "You are a dietician. For every JSON element, you get a *reference* food-description and a list of *candidate* descriptions.\n"
+        "Decide which candidate is nutritionally **most similar** to the reference – calories, macronutrients, and key micronutrients should differ by ≈≤10 %, and main ingredients plus preparation method should align.\n\n"
+        "Return the **1-based index** (1 … N) of the closest candidate. If *none* of the candidates is similar enough, return **-1**.\n\n"
+        "Reply **only** with the required function call – no extra text."
+    ),
+}
+
+
+class GroupSelection(BaseModel):
+    """Structured GPT output: index of the closest candidate (or ‑1)."""
+
+    closest_idx: int = Field(
+        ...,
+        description=(
+            "1-based position of the closest candidate within the provided list; "
+            "-1 when none of the candidates meet nutritional-similarity criteria."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# GPT helpers (per-batch) – selection task
+# ---------------------------------------------------------------------------
+
+
+def _build_select_prompt(batch_df: pd.DataFrame, tool_name: str) -> List[dict]:
+    """Compose chat prompt for *selection* batches."""
+
+    prompt: List[dict] = [_SYSTEM_PROMPT_SELECT]
+
+    # ---------------- Few-shot examples to prime the model -----------------
+    few_shots = [
+        (
+            "boiled potato",  # reference
+            [
+                "baked potato",
+                "fried potato",
+                "steamed broccoli",
+                "white rice, cooked",
+                "roasted sweet potato",
+            ],
+            1,  # baked potato is the closest
+        ),
+        (
+            "green peas, raw",
+            [
+                "green peas, frozen, uncooked",
+                "green beans, raw",
+                "black beans, cooked",
+                "spinach, raw",
+                "green peas, canned, drained",
+            ],
+            -1,  # none are sufficiently similar (frozen raw peas differ in nutrient density)
+        ),
+        (
+            "almonds, roasted, salted",
+            [
+                "almonds, raw",
+                "cashews, roasted, salted",
+                "peanuts, roasted, salted",
+                "almond butter, plain",
+                "walnuts, raw",
+            ],
+            1,  # raw almonds are the closest
+        ),
+    ]
+
+    for idx, (ref_desc, cand_list, chosen_idx) in enumerate(few_shots, start=1):
+        example_payload = [
+            {
+                "reference": ref_desc,
+                "candidates": cand_list,
+            }
+        ]
+        tool_id = f"example_sel_{idx}"
+
+        # User message with the example
+        prompt.append(
+            {
+                "role": "user",
+                "content": (
+                    "Choose the nutritionally closest candidate. JSON list:\n"
+                    f"{json.dumps(example_payload, ensure_ascii=False)}"
+                ),
+            }
+        )
+
+        # Assistant message performing the function call
+        prompt.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(
+                                {"selections": [{"closest_idx": chosen_idx}]}
+                            ),
+                        },
+                    }
+                ],
+            }
+        )
+
+        # Matching tool response message (required)
+        prompt.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_id,
+                "content": json.dumps({"selections": [{"closest_idx": chosen_idx}]}),
+            }
+        )
+
+    # ---------------- Actual user batch ----------------
+    payload = batch_df.to_dict(orient="records")
+    prompt.append(
+        {
+            "role": "user",
+            "content": (
+                "For every element in the JSON list, output the index (1-based) of the nutritionally closest candidate – or ‑1 if none qualify.\n"
+                "Reply ONLY via the function call.\n\n"
+                f"JSON list:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+            ),
+        }
+    )
+
+    return prompt
+
+
+@retry(
+    retry=retry_if_exception_type(Exception),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=1, max=30),
+    reraise=True,
+)
+def _query_select_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
+    """Send one *selection* batch to GPT and parse the response."""
+
+    batch_size = len(batch_df)
+
+    # Dynamic model enforcing exact list length
+    BatchModel = create_model(
+        "BatchGroupSelections",
+        selections=(
+            conlist(GroupSelection, min_length=batch_size, max_length=batch_size),
+            ...,
+        ),
+    )
+
+    tool_spec = openai.pydantic_function_tool(BatchModel)
+    tool_name = tool_spec["function"]["name"]
+
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini-2025-04-14",
+        messages=_build_select_prompt(batch_df, tool_name),
+        tools=[tool_spec],
+        tool_choice="auto",
+    )
+
+    # Extract raw JSON arguments
+    try:
+        tool_call = response.choices[0].message.tool_calls[0]
+        raw_args: str = tool_call.function.arguments  # type: ignore[attr-defined]
+    except (AttributeError, IndexError):
+        raise RuntimeError("GPT response missing tool-call arguments")
+
+    parsed = BatchModel(**json.loads(raw_args))
+    selections_df = pd.DataFrame([sel.model_dump() for sel in parsed.selections])
+
+    # Preserve index alignment
+    selections_df.index = batch_df.index
+    return selections_df
+
+
+# ---------------------------------------------------------------------------
+# Public helper – closest-candidate selection
+# ---------------------------------------------------------------------------
+
+
+def select_closest_dataframe(
+    df: pd.DataFrame,
+    col_item_a: str | None = None,
+    col_item_b: str | None = None,
+    n_candidates: int = 5,
+    batch_size: int = 30,
+    num_threads: int = 8,
+) -> pd.DataFrame:
+    """For each reference item (column *A*), choose the closest of *n* candidates.
+
+    The dataframe is expected to contain exactly *n_candidates* rows per unique
+    value in *col_item_a* (the reference item).  Column *col_item_b* holds a
+    **different** candidate in every row.  The function asks GPT to decide
+    which candidate is nutritionally most similar and returns a *reduced*
+    dataframe with one row per reference item and an integer column
+    ``closest_idx`` holding 1…*n_candidates* (or ‑1 when none qualify).
+    """
+
+    if col_item_a is None or col_item_b is None:
+        col_item_a, col_item_b = df.columns[:2]
+
+    # Helper to ensure dictionary objects (not JSON strings)
+    def _ensure_obj(val):
+        return val if not isinstance(val, str) else json.loads(val)
+
+    # Extract *description* strings only (fallback to str(obj) if missing)
+    def _desc(obj):
+        if isinstance(obj, dict) and "description" in obj:
+            return obj["description"]
+        return str(obj)
+
+    work_df = df[[col_item_a, col_item_b]].copy()
+    work_df[col_item_a] = work_df[col_item_a].apply(_desc)
+    work_df[col_item_b] = work_df[col_item_b].apply(_desc)
+
+    # Basic sanity checks ----------------------------------------------------
+    counts = work_df.groupby(col_item_a).size()
+    if (counts != n_candidates).any():
+        raise ValueError(
+            "Each reference item must have exactly n_candidates candidates."
+        )
+
+    # Build grouped dataframe with one row per reference item ---------------
+    groups = []
+    references = []  # keep original reference objects for final output
+
+    grouped_df = work_df.groupby(col_item_a)[col_item_b].apply(list).reset_index()
+    grouped_df.columns = ["reference", "candidates"]
+
+    # Split into batches -----------------------------------------------------
+    batches = [
+        grouped_df.iloc[i : i + batch_size]
+        for i in range(0, len(grouped_df), batch_size)
+    ]
+    if not batches:
+        return pd.DataFrame(columns=[col_item_a, "closest_idx"])
+
+    # Parallel GPT execution -------------------------------------------------
+    results: List[pd.DataFrame] = []
+
+    def _run(batch: pd.DataFrame):
+        print(f"[GPT-select] reference rows {batch.index.min()}–{batch.index.max()}")
+        return _query_select_gpt(batch)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_map = {
+            executor.submit(_run, batch): idx for idx, batch in enumerate(batches)
+        }
+        for fut in concurrent.futures.as_completed(future_map):
+            try:
+                results.append(fut.result())
+            except Exception as exc:
+                idx = future_map[fut]
+                raise RuntimeError(f"Failed GPT selection for batch {idx}") from exc
+
+    selection_df = pd.concat(results).sort_index()
+
+    # Build reduced output dataframe ----------------------------------------
+    out = pd.DataFrame(
+        {
+            col_item_a: grouped_df["reference"],
+            "closest_idx": selection_df["closest_idx"].values,
+        }
+    )
+    return out

@@ -1,1 +1,0 @@
-# from dataset_structure import USDA_diet_categories, USDASRLegacyFoodItem

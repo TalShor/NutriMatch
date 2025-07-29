@@ -3,8 +3,8 @@ from typing import Callable
 
 import pandas as pd
 
-from ..FCDBs.SR_legacy.dataset_structure import SR_LegacyFoodItem
-from ..FCDBs.Zameret.dataset_structure import ZameretFoodItem
+from ..base_classes.base_food_item import FoodItem
+from ..FCDBs import *
 from ..gpt_tools.embeddings import get_batch_embedding
 from ..gpt_tools.translation import get_translation
 
@@ -26,18 +26,20 @@ class BaseDataDigestion:
             return data
         return pd.read_parquet(path)
 
+    def get_food_item_class(self, fcdb_name: str) -> type[FoodItem]:
+        try:
+            print(globals())
+            return globals()[f"{fcdb_name}FoodItem"]
+        except KeyError:
+            raise ValueError(f"Invalid FCDB: {fcdb_name}")
+
     def __init__(self, fcdb_name: str, batch_size: int = 50, num_threads: int = 16):
 
         self.batch_size = batch_size
         self.num_threads = num_threads
         self.fcdb_name = fcdb_name
 
-        if fcdb_name == SR_Legacy_name:
-            self.food_item_class: type[SR_LegacyFoodItem] = SR_LegacyFoodItem
-        elif fcdb_name == "Zameret":
-            self.food_item_class: type[ZameretFoodItem] = ZameretFoodItem
-        else:
-            raise ValueError(f"Invalid FCDB name: {fcdb_name}")
+        self.food_item_class: type[FoodItem] = self.get_food_item_class(fcdb_name)
 
         # Prepare output directory structure (one folder per FCDB).
         self.data_base_dir = f"data/FCDBs/{fcdb_name}"

@@ -1,8 +1,9 @@
 import argparse
 
 from src.base_classes.base_data_digestion import BaseDataDigestion
-from src.FCDBs.SR_legacy.digest_raw_data import *
-from src.FCDBs.Zameret.digest_raw_data import *
+from src.FCDBs.HPP.digest_raw_data import HPPDataDigestion  # noqa: F401
+from src.FCDBs.SR_legacy.digest_raw_data import SR_LegacyDataDigestion  # noqa: F401
+from src.FCDBs.Zameret.digest_raw_data import ZameretDataDigestion  # noqa: F401
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,6 +15,7 @@ def parse_args() -> argparse.Namespace:
 
 def get_data_digestion_class(fcdb_name: str) -> type[BaseDataDigestion]:
     try:
+        print(globals())
         return globals()[f"{fcdb_name}DataDigestion"]
     except KeyError:
         raise ValueError(f"Invalid FCDB: {fcdb_name}")
