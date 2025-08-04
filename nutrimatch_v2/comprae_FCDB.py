@@ -66,10 +66,13 @@ if __name__ == "__main__":
         .drop(columns=["str_const"])
     ).sort_values(by="embedding_similarity", ascending=False)
 
-    def _desc(obj):
-        if isinstance(obj, dict) and "description" in obj:
-            return obj["description"]
-        return str(obj)
+    single_fcdb2_to_multiple_fcdb1_matches_ranks = select_closest_dataframe(
+        single_fcdb2_to_multiple_fcdb1_matches,
+        col_item_a=args.fcdb2,
+        col_item_b=args.fcdb1,
+        batch_size=args.batch_size,
+        num_threads=args.num_threads,
+    )
 
     # compare the top 5 matches with GPT
     single_fcdb1_to_multiple_fcdb2_matches_ranks = select_closest_dataframe(
@@ -78,49 +81,13 @@ if __name__ == "__main__":
         col_item_b=args.fcdb2,
         batch_size=args.batch_size,
         num_threads=args.num_threads,
-    ).rename(columns={"closest_idx": "id_in_desc", args.fcdb1: "desc"})
-
-    single_fcdb2_to_multiple_fcdb1_matches_ranks = select_closest_dataframe(
-        single_fcdb2_to_multiple_fcdb1_matches,
-        col_item_a=args.fcdb2,
-        col_item_b=args.fcdb1,  
-        batch_size=args.batch_size,
-        num_threads=args.num_threads,
-    ).rename(columns={"closest_idx": "id_in_desc", args.fcdb2: "desc"})
-
-    single_fcdb1_to_multiple_fcdb2_matches["desc"] = (
-        single_fcdb1_to_multiple_fcdb2_matches[args.fcdb1].apply(_desc)
-    )
-    single_fcdb1_to_multiple_fcdb2_matches["id_in_desc"] = (
-        single_fcdb1_to_multiple_fcdb2_matches.groupby("desc").cumcount() + 1
     )
 
-    single_fcdb2_to_multiple_fcdb1_matches["desc"] = (
-        single_fcdb2_to_multiple_fcdb1_matches[args.fcdb2].apply(_desc)
-    )
-    single_fcdb2_to_multiple_fcdb1_matches["id_in_desc"] = (
-        single_fcdb2_to_multiple_fcdb1_matches.groupby("desc").cumcount() + 1
-    )
-
-    single_fcdb1_to_multiple_fcdb2_matches = (
-        single_fcdb1_to_multiple_fcdb2_matches.groupby("desc")["HPP"]
-        .apply(list)
-        .to_frame("HPP_options")
-        .join(single_fcdb1_to_multiple_fcdb2_matches_ranks.set_index("desc"))
-    )
-
-    single_fcdb2_to_multiple_fcdb1_matches = (
-        single_fcdb2_to_multiple_fcdb1_matches.groupby("desc")["SR_Legacy"]
-        .apply(list)
-        .to_frame("SR_Legacy_options")
-        .join(single_fcdb2_to_multiple_fcdb1_matches_ranks.set_index("desc"))
-    )
-
-    single_fcdb1_to_multiple_fcdb2_matches.to_parquet(
+    single_fcdb1_to_multiple_fcdb2_matches_ranks.to_parquet(
         f"{comparison_dir}/top_n_matches_{args.fcdb1}_{args.fcdb2}_with_decision.parquet"
     )
 
-    single_fcdb2_to_multiple_fcdb1_matches.to_parquet(
+    single_fcdb2_to_multiple_fcdb1_matches_ranks.to_parquet(
         f"{comparison_dir}/top_n_matches_{args.fcdb2}_{args.fcdb1}_with_decision.parquet"
     )
 

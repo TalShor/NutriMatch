@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """GPT-assisted comparison of food items.
 
 This module provides a *single public helper* – ``compare_dataframe`` – that takes a
@@ -31,9 +29,12 @@ The heavy lifting is done by OpenAI GPT-4 (or a compatible model) via the
 robust execution (automatic retries with exponential back-off).
 """
 
+from __future__ import annotations
+
 import concurrent.futures
 import json
 import os
+from ast import literal_eval
 from typing import List
 
 import openai
@@ -47,364 +48,86 @@ from tenacity import (
 )
 
 # ---------------------------------------------------------------------------
-# NEW concise system prompt
-# ---------------------------------------------------------------------------
-
-_SYSTEM_PROMPT: dict = {
-    "role": "system",
-    "content": (
-        "You are a dietician. For each food-item *pair*, decide whether they are **nutritionally similar** – swapping one for the other should not change calories, macronutrients, or key micronutrients by more than ≈10 %.\n\n"
-        "Focus on two factors: (1) the main ingredients, (2) the cooking / preparation method.  If both align, treat the items as similar; otherwise, they are different.\n\n"
-        "Ignore wording quirks (order, punctuation, singular/plural, synonyms) that do not affect nutrition.\n\n"
-        "Reply **only** with the required function call – no extra text."
-    ),
-}
-
-
-class PairJudgement(BaseModel):
-    """Structured GPT output for a single food-item pair."""
-
-    nutritionally_equivalent: bool = Field(
-        ...,
-        description="True when the two items are nutritionally similar as defined in the system prompt (≈ ≤ 5 % difference in energy/macros/micros).",
-    )
-
-
-# ---------------------------------------------------------------------------
-# GPT helpers (per-batch)
-# ---------------------------------------------------------------------------
-
-
-def _build_prompt(batch_df: pd.DataFrame, tool_name: str) -> List[dict]:
-    """Compose the chat prompt for the current batch."""
-
-    prompt: List[dict] = [_SYSTEM_PROMPT]
-
-    # -------------------------------------------------------------------
-    # Few-shot examples to prime the model
-    # -------------------------------------------------------------------
-    few_shots = [
-        (
-            {
-                "description": "granola bar, chocolate coated, with coconut",
-                "food_category": "Snacks",
-            },
-            {
-                "description": "snacks, granola bar, with coconut, chocolate coated",
-                "food_category": "Snacks",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "barley flour, malted",
-                "food_category": "Cereal Grains and Pasta",
-            },
-            {
-                "description": "barley malt flour",
-                "food_category": "Cereal Grains and Pasta",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "peas, green, raw",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            {
-                "description": "green peas, raw, frozen",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            False,
-        ),
-        (
-            {
-                "description": "nuts, almonds, oil roasted, with salt added",
-                "food_category": "Nut and Seed Products",
-            },
-            {
-                "description": "almonds, roasted, salted",
-                "food_category": "Nut and Seed Products",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "cucumber, with peel, raw",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            {
-                "description": "cucumber, raw, without peel",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "alcoholic beverage, wine, table, red",
-                "food_category": "Beverages",
-            },
-            {"description": "wine, table, red", "food_category": "Alcoholic Beverages"},
-            True,
-        ),
-        (
-            {
-                "description": "goose, domesticated, meat and skin, cooked, roasted",
-                "food_category": "Poultry Products",
-            },
-            {
-                "description": "goose, domesticated, meat and skin, raw",
-                "food_category": "Poultry Products",
-            },
-            False,
-        ),
-        (
-            {
-                "description": "chocolate, dark, 70 85% cacao solids",
-                "food_category": "Sweets",
-            },
-            {
-                "description": "chocolate, dark, 60 69% cacao solids",
-                "food_category": "Sweets",
-            },
-            False,
-        ),
-        (
-            {
-                "description": "cauliflower, frozen, unprepared",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            {
-                "description": "cauliflower, frozen, uncooked",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "raspberries, frozen, red, sweetened",
-                "food_category": "Fruits and Fruit Juices",
-            },
-            {
-                "description": "raspberries, frozen, sweetened",
-                "food_category": "Fruits and Fruit Juices",
-            },
-            True,
-        ),
-        (
-            {
-                "description": "bread, whole wheat, commercially prepared, toasted",
-                "food_category": "Baked Products",
-            },
-            {
-                "description": "bread, whole wheat, toasted",
-                "food_category": "Baked Products",
-            },
-            True,
-        ),
-    ]
-
-    for idx, (item_a, item_b, is_equiv) in enumerate(few_shots, start=1):
-        example_payload = [{"item_a": item_a, "item_b": item_b}]
-        tool_id = f"example_{idx}"
-
-        # User message with the example pair
-        prompt.append(
-            {
-                "role": "user",
-                "content": (
-                    "For each element decide nutritional similarity. JSON list:\n"
-                    f"{json.dumps(example_payload, ensure_ascii=False)}"
-                ),
-            }
-        )
-
-        # Assistant message calling the function tool
-        prompt.append(
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "id": tool_id,
-                        "type": "function",
-                        "function": {
-                            "name": tool_name,
-                            "arguments": json.dumps(
-                                {"judgements": [{"nutritionally_equivalent": is_equiv}]}
-                            ),
-                        },
-                    }
-                ],
-            }
-        )
-
-        # Matching tool response message (required by OpenAI)
-        prompt.append(
-            {
-                "role": "tool",
-                "tool_call_id": tool_id,
-                "content": json.dumps(
-                    {"judgements": [{"nutritionally_equivalent": is_equiv}]}
-                ),
-            }
-        )
-
-    # -------------------------------------------------------------------
-    # Actual user batch
-    # -------------------------------------------------------------------
-    payload = batch_df.to_dict(orient="records")
-    user_msg = {
-        "role": "user",
-        "content": (
-            "For every element in the JSON list decide if *item_a* and *item_b*\n"
-            "are nutritionally similar (see guidelines above).  Reply ONLY via the tool call.\n\n"
-            f"JSON list:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
-        ),
-    }
-
-    prompt.append(user_msg)
-    return prompt
-
-
-@retry(
-    retry=retry_if_exception_type(Exception),  # on *any* error
-    stop=stop_after_attempt(3),  # up to 3 tries
-    wait=wait_exponential(multiplier=2, min=1, max=30),  # 1 s → 2 s → 4 s (capped)
-    reraise=True,
-)
-def _query_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
-    """Send one batch to GPT and parse the structured response."""
-
-    batch_size = len(batch_df)
-
-    # Build a dynamic model enforcing the *exact* list length for added safety
-    BatchModel = create_model(
-        "BatchPairJudgements",
-        judgements=(
-            conlist(PairJudgement, min_length=batch_size, max_length=batch_size),
-            ...,  # mandatory field
-        ),
-    )
-
-    tool_spec = openai.pydantic_function_tool(BatchModel)
-    tool_name = tool_spec["function"]["name"]
-
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini-2025-04-14",  # small, cost-effective model – adjust as needed
-        messages=_build_prompt(batch_df, tool_name),
-        tools=[tool_spec],
-        tool_choice="auto",
-    )
-
-    # Extract the *raw* JSON arguments string
-    try:
-        tool_call = response.choices[0].message.tool_calls[0]
-        raw_args: str = tool_call.function.arguments  # type: ignore[attr-defined]
-    except (AttributeError, IndexError):
-        raise RuntimeError("GPT response missing tool-call arguments")
-
-    parsed = BatchModel(**json.loads(raw_args))
-    judging_df = pd.DataFrame([j.model_dump() for j in parsed.judgements])
-
-    # Preserve original index for alignment
-    judging_df.index = batch_df.index
-    return judging_df
-
-
-# ---------------------------------------------------------------------------
-# Public helper
-# ---------------------------------------------------------------------------
-
-
-def compare_dataframe(
-    df: pd.DataFrame,
-    col_item_a: str | None = None,
-    col_item_b: str | None = None,
-    batch_size: int = 30,
-    num_threads: int = 8,
-) -> pd.DataFrame:
-    """Add GPT nutritional-equivalence judgement to *df*.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input dataframe – **must contain two columns** with JSON-serialisable
-        objects representing the two food items to compare.  If *col_item_a*
-        and *col_item_b* are omitted, the first two columns are assumed.
-    col_item_a / col_item_b : str, optional
-        Names of the columns holding the items.  Useful when *df* has more than
-        two columns.
-    batch_size : int
-        Max number of rows sent to GPT in a single request.
-    num_threads : int
-        Parallelism level for batching.
-
-    Returns
-    -------
-    pd.DataFrame
-        The input dataframe *augmented* with ``nutritionally_equivalent``
-        (bool) column.
-    """
-
-    if col_item_a is None or col_item_b is None:
-        col_item_a, col_item_b = df.columns[:2]
-
-    work_df = df[[col_item_a, col_item_b]].copy()
-
-    # Ensure each cell is a *native* Python object (not string) to avoid double-encoding
-    def _ensure_obj(val):
-        return val if not isinstance(val, str) else json.loads(val)
-
-    work_df[col_item_a] = work_df[col_item_a].apply(_ensure_obj)
-    work_df[col_item_b] = work_df[col_item_b].apply(_ensure_obj)
-
-    # Split into batches
-    batches = [
-        work_df.iloc[i : i + batch_size] for i in range(0, len(work_df), batch_size)
-    ]
-    if not batches:
-        return df  # nothing to do
-
-    # Parallel execution – thread-pool is OK because the heavy lifting is I/O bound
-    results: List[pd.DataFrame] = []
-
-    def _run(batch: pd.DataFrame):
-        print(f"[GPT-compare] rows {batch.index.min()}–{batch.index.max()}")
-        return _query_gpt(batch)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        future_map = {
-            executor.submit(_run, batch): idx for idx, batch in enumerate(batches)
-        }
-        for fut in concurrent.futures.as_completed(future_map):
-            try:
-                results.append(fut.result())
-            except Exception as exc:
-                idx = future_map[fut]
-                raise RuntimeError(f"Failed GPT comparison for batch {idx}") from exc
-
-    comparison_df = pd.concat(results).sort_index()
-
-    # Merge-back preserving original row order
-    out = df.copy()
-    out["nutritionally_equivalent"] = comparison_df["nutritionally_equivalent"]
-    return out
-
-
-# ---------------------------------------------------------------------------
-# NEW helper – pick the closest match among *n* candidates
+# helper – pick the closest match among *n* candidates
 # ---------------------------------------------------------------------------
 
 # Concise system prompt for *selection* task (reference vs. candidates)
-_SYSTEM_PROMPT_SELECT: dict = {
+_SYSTEM_PROMPT_SELECT = {
     "role": "system",
     "content": (
-        "You are a dietician. For every JSON element, you get a *reference* food-description and a list of *candidate* descriptions.\n"
-        "Decide which candidate is nutritionally **most similar** to the reference – calories, macronutrients, and key micronutrients should differ by ≈≤10 %, and main ingredients plus preparation method should align.\n\n"
-        "Return the **1-based index** (1 … N) of the closest candidate. If *none* of the candidates is similar enough, return **-1**.\n\n"
-        "Reply **only** with the required function call – no extra text."
+        "You are a certified dietitian specialising in food substitution.\n\n"
+        "INPUT (per element):\n"
+        "• reference – a food description\n"
+        "• candidates – 1…N alternative descriptions\n"
+        "OUTPUT: Return ONLY the function-call with "
+        '{ "selections": [ { "closest_idx": <int> } … ] }.\n'
+        "Index is 1-based; use −1 ONLY when no candidate is sufficiently similar.\n\n"
+        "----------------------------------------------------------------------\n"
+        "DECISION HIERARCHY (apply top→bottom)\n"
+        "0. Textual Match – After normalising trivial wording differences, if a candidate description is identical to the reference, choose it immediately.\n"
+        "1. Core Food Identity – Look at the *description* first. Prefer candidates whose description names the SAME primary food (same species/plant, same cut or product form) allowing for synonyms, spelling, singular–plural, and word-order changes.\n"
+        "2. Food Group  – Prefer same USDA Food Group (or clearly synonymous group).\n"
+        "3. Source      – Prefer same primary biological origin: cow-milk, goat-milk, sheep-milk, soy, almond, oat, legume, cereal grain, etc.\n"
+        "4. State       – Prefer same preparation state (raw, boiled, baked, fried, grilled, dried, powdered, canned, frozen, etc.).\n"
+        "5. Macro Match – Accept if calories ±15 %, each macro (protein/fat/carbs) ±20 %.\n"
+        "6. Ignore      – Herbs, spices, salt, sweeteners, added vitamins/minerals UNLESS they change macros >5 g per 100 g. Fat-difference tolerance: ≤5 g/100 g.\n"
+        "7. Threshold   – If a candidate satisfies ≥75 % of rules 1–5 choose it; otherwise return −1.\n\n"
+        "----------------------------------------------------------------------\n"
+        "SCENARIO-SPECIFIC GUIDELINES (augment rules above)\n"
+        "• Plant-based milks vs. dairy milk: treat fortified soy/almond/oat milks "
+        "as potential substitutes for low-fat or skim cow milk if macros fit.\n"
+        "• Low-sugar or sugar-free desserts: sucrose↔sweetener swap is acceptable "
+        "if calories stay within ±15 %.\n"
+        "• Gluten-free baked goods: GF bread/crackers may substitute for wheat "
+        "variants as long as grain base and macros align (e.g., rice bread vs. "
+        "white bread).\n"
+        "• Composite dishes: All MAIN ingredients + cooking method must match; "
+        "sauces or herbs may differ. E.g., ‘baked salmon with lemon’ ≈ ‘baked "
+        "salmon, plain’. Treat ‘ready-to-eat’ vs. ‘raw ingredient’ as different "
+        "states.\n"
+        "• Fermented dairy: yogurt ↔ kefir ↔ labneh may substitute if fat% and "
+        "added sugar comparable.\n"
+        "• Cheese fat levels: 5 % vs. 8 % is acceptable; 5 % vs. 30 % is not.\n"
+        "• Oils and spreads: Avocado oil ↔ olive oil but NOT ↔ butter.\n"
+        "• Fortified juices: presence of added vitamins is ignored if macros match.\n"
+        "• Meat form: Prefer SAME muscle-cut or slice over ground/minced or cured when both are available.\n"
+        "• Species priority: When primary species differs (banana vs. plantain, beef vs. turkey), species match outweighs cooking-method match.\n"
+        "• Desserts: Match primary macronutrient SOURCE—dairy/egg custards should not be substituted with pure-sugar toppings even if calories align.\n\n"
+        "----------------------------------------------------------------------\n"
+        "ALIAS / SYNONYM CHEAT-SHEET (non-exhaustive; treat as SAME food for "
+        "rules 1-3)\n"
+        "— Cheeses —\n"
+        "  Kashkaval → Gouda/Edam/Cheddar family (semi-hard yellow cheese)\n"
+        "  Pecorino, Manchego → hard/semi-hard sheep cheese (Parmesan-like)\n"
+        "  Halloumi → brined grilling cheese (close to Feta in salt/fat)\n"
+        "  Tzfatit, ‘salty cheese’, ‘white cheese’ → brined fresh cheese (≈ Feta)\n"
+        "  Labneh → strained yogurt / cream-cheese style spread\n"
+        "  Port de Salut → semi-soft cow cheese (like Muenster)\n"
+        "— Milks & Yogurts —\n"
+        "  Almond/oat/soy milk → plant milk category (use fat-free or low-fat milk "
+        "as proxy when macros match)\n"
+        "  ‘Producer milk’ → whole cow milk\n"
+        "— Breads & Baked goods —\n"
+        "  ‘Yellow bread’, ‘light rye’ → rye/wheat bread family\n"
+        "  ‘Ma’amoul’ → date-filled shortbread cookie\n"
+        "  ‘Gluten-free flour mix’ → baking flour substitute (rice/corn/potato).\n"
+        "— Meats & Fish —\n"
+        "  ‘Seabass’, ‘sea bass’ same fish; raw ↔ cooked, adjust state rule.\n"
+        "  ‘Mosht’ fish → tilapia/cichlid family.\n"
+        "— Condiments & Herbs —\n"
+        "  Za’atar → thyme/oregano/sumac blend\n"
+        "  Amba → pickled mango sauce\n"
+        "  ‘Asian sauce (generic)’ ↔ soy-based stir-fry sauce if macros similar.\n"
+        "— Processed & Cured Meats —\n"
+        "  Poultry pastrami → pastrami, turkey | chicken\n"
+        "— Beef Cuts —\n"
+        "  Entrecôte → rib-eye steak, boneless beef rib\n"
+        "— Misc —\n"
+        "  ‘Yellow cheese’ (without spec) → semi-hard cow cheese\n"
+        "  ‘Energy bar’ ↔ cereal/protein bar; compare macros not brand.\n\n"
+        "----------------------------------------------------------------------\n"
+        "EXPLICIT REMINDER: When in doubt CHOOSE the closest qualifying candidate "
+        "rather than returning −1.\n"
     ),
 }
 
@@ -434,37 +157,387 @@ def _build_select_prompt(batch_df: pd.DataFrame, tool_name: str) -> List[dict]:
     # ---------------- Few-shot examples to prime the model -----------------
     few_shots = [
         (
-            "boiled potato",  # reference
+            {
+                "description": "boiled potato",
+                "food_category": "Vegetables and Vegetable Products",
+            },
             [
-                "baked potato",
-                "fried potato",
-                "steamed broccoli",
-                "white rice, cooked",
-                "roasted sweet potato",
+                {
+                    "description": "baked potato",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "fried potato",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "steamed broccoli",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "white rice, cooked",
+                    "food_category": "Cereal Grains and Pasta",
+                },
+                {
+                    "description": "roasted sweet potato",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
             ],
-            1,  # baked potato is the closest
+            1,
         ),
         (
-            "green peas, raw",
+            {
+                "description": "baked salmon with lemon juice, no added oil",
+                "food_category": "Finfish and Shellfish Products",
+            },
             [
-                "green peas, frozen, uncooked",
-                "green beans, raw",
-                "black beans, cooked",
-                "spinach, raw",
-                "green peas, canned, drained",
+                {
+                    "description": "fish, salmon, baked, dry heat",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, salmon, raw",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, salmon, smoked",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, trout, baked",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, seabass, baked",
+                    "food_category": "Finfish and Shellfish Products",
+                },
             ],
-            -1,  # none are sufficiently similar (frozen raw peas differ in nutrient density)
+            1,
         ),
         (
-            "almonds, roasted, salted",
+            {
+                "description": "green peas, raw",
+                "food_category": "Vegetables and Vegetable Products",
+            },
             [
-                "almonds, raw",
-                "cashews, roasted, salted",
-                "peanuts, roasted, salted",
-                "almond butter, plain",
-                "walnuts, raw",
+                {
+                    "description": "green peas, frozen, uncooked",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "green beans, raw",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "black beans, cooked",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "spinach, raw",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
+                {
+                    "description": "green peas, canned, drained",
+                    "food_category": "Vegetables and Vegetable Products",
+                },
             ],
-            1,  # raw almonds are the closest
+            -1,
+        ),
+        (
+            {
+                "description": "almonds, roasted, salted",
+                "food_category": "Nut and Seed Products",
+            },
+            [
+                {
+                    "description": "almonds, raw",
+                    "food_category": "Nut and Seed Products",
+                },
+                {
+                    "description": "cashews, roasted, salted",
+                    "food_category": "Nut and Seed Products",
+                },
+                {
+                    "description": "peanuts, roasted, salted",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "almond butter, plain",
+                    "food_category": "Nut and Seed Products",
+                },
+                {
+                    "description": "walnuts, raw",
+                    "food_category": "Nut and Seed Products",
+                },
+            ],
+            1,
+        ),
+        (
+            {
+                "description": "baked canned baked beans in tomato sauce",
+                "food_category": "Legumes and Legume Products",
+            },
+            [
+                {
+                    "description": "beans, baked, canned, with pork and tomato sauce",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "beans, baked, canned, with beef",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "beans, baked, canned, with pork",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "beans, baked, canned, with franks",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "beans, baked, canned, plain or vegetarian",
+                    "food_category": "Legumes and Legume Products",
+                },
+            ],
+            5,
+        ),
+        (
+            {
+                "description": "arabian dough stuffed with za'atar herb (homemade)",
+                "food_category": "Baked Products",
+            },
+            [
+                {"description": "phyllo dough", "food_category": "Baked Products"},
+                {"description": "bread, cinnamon", "food_category": "Baked Products"},
+                {
+                    "description": "bread, cracked wheat",
+                    "food_category": "Baked Products",
+                },
+                {
+                    "description": "bread, pita, whole wheat",
+                    "food_category": "Baked Products",
+                },
+                {"description": "bread, wheat", "food_category": "Baked Products"},
+            ],
+            4,
+        ),
+        (
+            {
+                "description": "apple, raw, with skin",
+                "food_category": "Fruits and Fruit Juices",
+            },
+            [
+                {
+                    "description": "apples, raw, without skin",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "apples, raw, golden delicious, with skin",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "apples, raw, with skin (includes foods for usda's food distribution program)",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "apples, raw, without skin, cooked, boiled",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "apples, raw, without skin, cooked, microwave",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+            ],
+            3,
+        ),
+        (
+            {
+                "description": "baked falafel (commercial)",
+                "food_category": "Fast Foods",
+            },
+            [
+                {
+                    "description": "falafel, home prepared",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "hummus, commercial",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "smart soup, moroccan chick pea",
+                    "food_category": "Meals, Entrees, and Side Dishes",
+                },
+                {
+                    "description": "hummus, home prepared",
+                    "food_category": "Legumes and Legume Products",
+                },
+                {
+                    "description": "cake, cheesecake, commercially prepared",
+                    "food_category": "Baked Products",
+                },
+            ],
+            1,
+        ),
+        (
+            {
+                "description": "bulgarian cheese (cow's milk), 5 % fat, sliced",
+                "food_category": "Dairy and Egg Products",
+            },
+            [
+                {
+                    "description": "cheese, cream, low fat",
+                    "food_category": "Dairy and Egg Products",
+                },
+                {
+                    "description": "cheese, feta",
+                    "food_category": "Dairy and Egg Products",
+                },
+                {
+                    "description": "cheese, swiss, low fat",
+                    "food_category": "Dairy and Egg Products",
+                },
+                {
+                    "description": "cheese, cream, fat free",
+                    "food_category": "Dairy and Egg Products",
+                },
+                {
+                    "description": "cheese, cream",
+                    "food_category": "Dairy and Egg Products",
+                },
+            ],
+            2,
+        ),
+        (
+            {
+                "description": "bagel (white, plain, sliced)",
+                "food_category": "Baked Products",
+            },
+            [
+                {
+                    "description": "bagels, whole grain white",
+                    "food_category": "Baked Products",
+                },
+                {"description": "bagels, wheat", "food_category": "Baked Products"},
+                {"description": "bagels, egg", "food_category": "Baked Products"},
+                {
+                    "description": "bagels, plain, unenriched, without calcium propionate (includes onion, poppy, sesame)",
+                    "food_category": "Baked Products",
+                },
+                {
+                    "description": "bread, white wheat",
+                    "food_category": "Baked Products",
+                },
+            ],
+            2,
+        ),
+        (
+            {
+                "description": "baked sea bass (raw or cooked state not specified)",
+                "food_category": "Finfish and Shellfish Products",
+            },
+            [
+                {
+                    "description": "fish, sea bass, mixed species, raw",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, sea bass, mixed species, cooked, dry heat",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, bass, striped, raw",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, bass, fresh water, mixed species, raw",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+                {
+                    "description": "fish, bluefish, raw",
+                    "food_category": "Finfish and Shellfish Products",
+                },
+            ],
+            2,
+        ),
+        (
+            {
+                "description": "avocado spread (guacamole)",
+                "food_category": "Fats and Oils",
+            },
+            [
+                {"description": "oil, avocado", "food_category": "Fats and Oils"},
+                {
+                    "description": "vegetable oil butter spread, reduced calorie",
+                    "food_category": "Fats and Oils",
+                },
+                {
+                    "description": "margarine like, vegetable oil spread, fat free, tub",
+                    "food_category": "Fats and Oils",
+                },
+                {
+                    "description": "margarine like, vegetable oil spread, 20% fat, without salt",
+                    "food_category": "Fats and Oils",
+                },
+                {
+                    "description": "margarine like, vegetable oil spread, 20% fat, with salt",
+                    "food_category": "Fats and Oils",
+                },
+            ],
+            -1,
+        ),
+        (
+            {"description": "balsamic vinegar", "food_category": "Spices and Herbs"},
+            [
+                {
+                    "description": "vinegar, balsamic",
+                    "food_category": "Spices and Herbs",
+                },
+                {
+                    "description": "vinegar, distilled",
+                    "food_category": "Spices and Herbs",
+                },
+                {
+                    "description": "vinegar, red wine",
+                    "food_category": "Spices and Herbs",
+                },
+                {"description": "vinegar, cider", "food_category": "Spices and Herbs"},
+                {
+                    "description": "spices, basil, dried",
+                    "food_category": "Spices and Herbs",
+                },
+            ],
+            1,
+        ),
+        # Example demonstrating Rule 0 – textual equivalence (banana vs. bananas)
+        (
+            {
+                "description": "banana, raw",
+                "food_category": "Fruits and Fruit Juices",
+            },
+            [
+                {
+                    "description": "bananas, raw",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "plantains, yellow, raw",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "papayas, raw",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "breadfruit, raw",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+                {
+                    "description": "apricots, raw",
+                    "food_category": "Fruits and Fruit Juices",
+                },
+            ],
+            1,
         ),
     ]
 
@@ -610,14 +683,14 @@ def select_closest_dataframe(
         return val if not isinstance(val, str) else json.loads(val)
 
     # Extract *description* strings only (fallback to str(obj) if missing)
-    def _desc(obj):
-        if isinstance(obj, dict) and "description" in obj:
-            return obj["description"]
-        return str(obj)
+    # def _desc(obj):
+    #     if isinstance(obj, dict) and "description" in obj:
+    #         return obj["description"]
+    #     return str(obj)
 
     work_df = df[[col_item_a, col_item_b]].copy()
-    work_df[col_item_a] = work_df[col_item_a].apply(_desc)
-    work_df[col_item_b] = work_df[col_item_b].apply(_desc)
+    work_df[col_item_a] = work_df[col_item_a].apply(str)
+    work_df[col_item_b] = work_df[col_item_b].apply(str)
 
     # Basic sanity checks ----------------------------------------------------
     counts = work_df.groupby(col_item_a).size()
@@ -662,10 +735,21 @@ def select_closest_dataframe(
     selection_df = pd.concat(results).sort_index()
 
     # Build reduced output dataframe ----------------------------------------
-    out = pd.DataFrame(
+    matches_ranks = pd.DataFrame(
         {
-            col_item_a: grouped_df["reference"],
+            "reference": grouped_df["reference"],
             "closest_idx": selection_df["closest_idx"].values,
         }
     )
-    return out
+
+    df_out = df.copy()
+    df_out["reference"] = df_out[col_item_a].apply(str)
+
+    df_out = (
+        df_out.groupby("reference")[col_item_b]
+        .apply(list)
+        .to_frame(f"{col_item_b}_options")
+        .join(matches_ranks.set_index("reference"))
+    )
+    df_out.index = pd.Series(df_out.index).apply(literal_eval)
+    return df_out

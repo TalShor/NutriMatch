@@ -1,0 +1,99 @@
+example_1:
+  sr_legacy:
+    origin:
+      hebrew_name: "אפונה יבשה מונבטת"
+      short_description: "Sprouted lentils"
+      category_hint: "Pulses and products"
+    target:
+      description: "Lentils, sprouted, raw"
+      food_category: "Legumes and Legume Products"
+
+example_2:
+  sr_legacy:
+    origin:
+      hebrew_name: "אגוזי חטיף אגוזי לוז עלית"
+      short_description: "Coated peanuts"
+      category_hint: "sweets"
+    target:
+      description: "Peanuts, sugar-coated, roasted"
+      food_category: "Nut and Seed Products"
+
+example_3:
+  sr_legacy:
+    origin:
+      hebrew_name: "יופלה GO לייט בטעם קוקוס 1% שומן"
+      short_description: "Flavored Yogurt"
+      category_hint: "milk, cream cheese and yogurts"
+    target:
+      description: "Yogurt, coconut flavor, lowfat, 1 % milkfat"
+      food_category: "Dairy and Egg Products"
+
+example_4:
+  sr_legacy:
+    origin:
+      hebrew_name: "פריכיות תירס דקות עם קינואה ובזיליקום"
+      short_description: "Corn crackers"
+      category_hint: "Bread"
+    target:
+      description: "Crackers, corn and quinoa, with basil, baked"
+      food_category: "Baked Products"
+
+example_5:
+  sr_legacy:
+    origin:
+      hebrew_name: "דגני בוקר קורנפלקס ללא סוכר ומלח ללא גלוטן דגש"
+      short_description: "Cornflakes"
+      category_hint: "Cereals"
+    target:
+      description: "Cereals ready-to-eat, corn flakes, unsweetened, gluten-free"
+      food_category: "Breakfast Cereals"
+
+example_6:
+  sr_legacy:
+    origin:
+      hebrew_name: "קטשופ חריף היינץ"
+      short_description: "Ketchup"
+      category_hint: "Soups and sauces"
+    target:
+      description: "Catsup (ketchup), hot style"
+      food_category: "Soups, Sauces, and Gravies"
+
+example_7:
+  sr_legacy:
+    origin:
+      hebrew_name: "בשר הודו אדום צלוי"
+      short_description: "Turkey"
+      category_hint: "Poultry and its products"
+    target:
+      description: "Turkey, dark meat, roasted"
+      food_category: "Poultry Products"
+
+example_8:
+  sr_legacy:
+    origin:
+      hebrew_name: "פיצה בצק עבה עם זיתים"
+      short_description: "Pizza"
+      category_hint: "Bread"
+    target:
+      description: "Pizza, cheese, thick crust, with olives, commercial"
+      food_category: "Fast Foods"
+
+example_9:
+  sr_legacy:
+    origin:
+      hebrew_name: "טבעות בצל, מקדולנד"
+      short_description: "Onion Rings"
+      category_hint: "Fast Foods"
+    target:
+      description: "Onion rings, battered, fried"
+      food_category: "Fast Foods"
+
+example_10:
+  sr_legacy:
+    origin:
+      hebrew_name: "שומן כבש"
+      short_description: "Beef fat"
+      category_hint: "Oils and fats"
+    target:
+      description: "Lamb fat, raw"
+      food_category: "Lamb, Veal, and Game Products"
