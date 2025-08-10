@@ -7,28 +7,21 @@ from ...base_classes.base_food_item import FoodItem
 
 
 class FNDDS_diet_categories(Enum):
-    Dairy_Products = "Dairy Products"
-    Soups_and_Sauces = "Soups and Sauces"
-    Baby_Foods = "Baby Foods"
-    Beverages = "Beverages"
-    Prepared_Foods = "Prepared Foods"
-    Unclassified = "Unclassified"
-    Desserts_and_Sweets = "Desserts and Sweets"
-    Mixed_Dishes = "Mixed Dishes"
-    Eggs_and_Egg_Dishes = "Eggs and Egg Dishes"
-    Whole_Meats = "Whole Meats"
-    Fast_Food_Items = "Fast Food Items"
-    Seafood = "Seafood"
-    Vegetables = "Vegetables"
-    Legumes_and_Beans = "Legumes and Beans"
-    Snack_Foods = "Snack Foods"
-    Nuts_and_Seeds = "Nuts and Seeds"
-    Breakfast_Items = "Breakfast Items"
-    Fruits_and_Juices = "Fruits and Juices"
-    Baked_Goods = "Baked Goods"
-    Grain_Based_Snacks = "Grain-Based Snacks"
-    Fried_Foods = "Fried Foods"
-    Fats_and_Oils = "Fats and Oils"
+    FRUIT = "FRUIT"
+    VEGETABLES = "VEGETABLES"
+    BEVERAGES = "BEVERAGES"
+    ALCOHOLIC_BEVERAGES = "ALCOHOLIC BEVERAGES"
+    WATER = "WATER"
+    FATS_AND_OILS = "FATS AND OILS"
+    CONDIMENTS_AND_SAUCES = "CONDIMENTS AND SAUCES"
+    SUGARS = "SUGARS"
+    BABY_FOODS_AND_FORMULAS = "BABY FOODS AND FORMULAS"
+    OTHER = "OTHER"
+    MILK_AND_DAIRY = "MILK AND DAIRY"
+    PROTEIN_FOODS = "PROTEIN FOODS"
+    MIXED_DISHES = "MIXED DISHES"
+    GRAINS = "GRAINS"
+    SNACKS_AND_SWEETS = "SNACKS AND SWEETS"
 
 
 class FNDDSFoodItem(FoodItem):
@@ -53,7 +46,7 @@ class FNDDSFoodItem(FoodItem):
     @validator("food_category", pre=True)
     def ensure_valid_group(cls, v):
         if v not in FNDDS_diet_categories._value2member_map_:
-            return FNDDS_diet_categories.Unclassified
+            return FNDDS_diet_categories.OTHER
         return v
 
     def __str__(self):
@@ -61,7 +54,3 @@ class FNDDSFoodItem(FoodItem):
         cls_str += f"\nfood_category: {self.food_category.value}."
         cls_str += f"\nfood_sub_category: {self.food_subcategory}."
         return cls_str
-
-    def simplify(self):
-        self.food_category = None
-        self.food_subcategory = None

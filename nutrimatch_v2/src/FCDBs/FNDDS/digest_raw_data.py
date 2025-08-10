@@ -1,7 +1,9 @@
 import io
+from pathlib import Path
 
 import pandas as pd
 import requests
+import yaml
 
 from ...base_classes.base_data_digestion import BaseDataDigestion
 
@@ -46,6 +48,16 @@ class FNDDSDataDigestion(BaseDataDigestion):
 
         # TODO: Map/rename columns to the expected schema if required by downstream
         #       processing.  For now we return the raw dataframe as-is.
+
+        return df
+
+    def standardise_data(self) -> pd.DataFrame:
+        df = self.raw_data.rename(columns={"description": "food_name"})
+
+        yaml_path = Path(__file__).parent / "food_categories_and_subcategories.yaml"
+        categories = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
+
+        df["food_category"] = df["WWEIA Category description"].map(categories)
 
         return df
 
