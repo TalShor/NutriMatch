@@ -1,0 +1,53 @@
+import io
+import zipfile
+
+import pandas as pd
+import requests
+
+from ...base_classes.base_data_digestion import BaseDataDigestion
+
+
+class FoundationFoodsDataDigestion(BaseDataDigestion):
+    def __init__(self, *args, **kwargs):
+        # The base class handles downloading and saving.  Pass the FCDB name.
+        super().__init__(fcdb_name="FoundationFoods", *args, **kwargs)
+
+    def download_raw_data(self) -> pd.DataFrame:
+        url = (
+            "https://fdc.nal.usda.gov/fdc-datasets/"
+            "FoodData_Central_foundation_food_json_2025-04-24.zip"
+        )
+
+        # 1. Download the zip to memory
+        resp = requests.get(url, timeout=120)
+        resp.raise_for_status()
+
+        # 2. Open the zipfile from the bytes
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+            # the archive contains a single JSON file:
+            json_name = [n for n in z.namelist() if n.endswith(".json")][0]
+            print("found:", json_name)
+
+            # 3. read it directly into pandas
+            with z.open(json_name) as f:
+                df = (
+                    pd.read_json(f)["FoundationFoods"]
+                    .apply(pd.Series)
+                    .rename(columns={"foodCategory": "food_category"})
+                )
+                df["food_category"] = df.food_category.apply(pd.Series)["description"]
+                return df
+
+    def standardise_data(self) -> pd.DataFrame:
+        nutrients_table = (
+            self.raw_data.set_index(["description", "food_category"])["foodNutrients"]
+            .explode()
+            .apply(pd.Series)
+        )
+        nutrients_table = nutrients_table[["amount"]].join(
+            nutrients_table["nutrient"].apply(pd.Series)[["name"]]
+        )
+
+        return nutrients_table.reset_index().pivot_table(
+            index=["description", "food_category"], values="amount", columns="name"
+        )

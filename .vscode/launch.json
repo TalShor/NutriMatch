@@ -9,11 +9,13 @@
             "type": "python",
             "request": "launch",
             // Path to the script inside the nutrimatch_v2 package
-            "program": "${workspaceFolder}/nutrimatch_v2/digest_FCDB.py",
+            "program": "${workspaceFolder}/nutrimatch_v2/comprae_FCDB.py",
             // Arguments to pass to the script
             "args": [
-                "--fcdb",
-                "FNDDS"
+                "--fcdb1",
+                "FNDDS",
+                "--fcdb2",
+                "SR_Legacy"
             ],
             // Run from the nutrimatch_v2 directory so relative paths resolve correctly
             "cwd": "${workspaceFolder}/nutrimatch_v2",

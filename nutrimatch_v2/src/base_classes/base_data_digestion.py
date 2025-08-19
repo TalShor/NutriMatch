@@ -80,6 +80,8 @@ class BaseDataDigestion:
         # 4. GPT translation
         # ------------------------------------------------------------------
 
+        exit(1)
+
         # If it's SR_Legacy, we need don't need to run translation - just copy the columns with a suffix.
         def sr_legacy_translation():
             df = self.standardised_data.copy().reset_index()
@@ -138,7 +140,7 @@ class BaseDataDigestion:
             [
                 copy_standardised_data,
                 self.food_item_class.get_fields_only_df(
-                    copy_standardised_data, keep_na=True
+                    copy_standardised_data, keep_na=True, replace_enum_to_value=True
                 ).rename(
                     columns={
                         col: col + "_translated"

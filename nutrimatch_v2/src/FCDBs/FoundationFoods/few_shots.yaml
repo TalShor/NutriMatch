@@ -1,0 +1,71 @@
+example_1:
+  sr_legacy:
+    origin:
+      description: "Beef, ground, 80% lean meat / 20% fat, raw"
+      food_category: "Beef Products"
+    target:
+      description: "Beef, ground, 80% lean meat / 20% fat, raw"
+      food_category: "Beef Products"
+
+example_2:
+  sr_legacy:
+    origin:
+      description: "Spinach, raw"
+      food_category: "Vegetables and Vegetable Products"
+    target:
+      description: "Spinach, raw"
+      food_category: "Vegetables and Vegetable Products"
+
+example_3:
+  sr_legacy:
+    origin:
+      description: "Chicken, breast, meat only, raw"
+      food_category: "Poultry Products"
+    target:
+      description: "Chicken, breast, meat only, raw"
+      food_category: "Poultry Products"
+
+example_4:
+  sr_legacy:
+    origin:
+      description: "Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D"
+      food_category: "Dairy and Egg Products"
+    target:
+      description: "Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D"
+      food_category: "Dairy and Egg Products"
+
+example_5:
+  sr_legacy:
+    origin:
+      description: "Almonds, dry roasted, without salt added"
+      food_category: "Nut and Seed Products"
+    target:
+      description: "Nuts, almonds, dry roasted, without salt added"
+      food_category: "Nut and Seed Products"
+
+example_6:
+  sr_legacy:
+    origin:
+      description: "Bread, white, commercially prepared (includes soft bread crumbs)"
+      food_category: "Baked Products"
+    target:
+      description: "Bread, white, commercially prepared"
+      food_category: "Baked Products"
+
+example_7:
+  sr_legacy:
+    origin:
+      description: "Rice, white, long-grain, regular, raw, enriched"
+      food_category: "Cereal Grains and Pasta"
+    target:
+      description: "Rice, white, long-grain, regular, raw, enriched"
+      food_category: "Cereal Grains and Pasta"
+
+example_8:
+  sr_legacy:
+    origin:
+      description: "Salmon, Atlantic, farmed, raw"
+      food_category: "Finfish and Shellfish Products"
+    target:
+      description: "Salmon, Atlantic, farmed, raw"
+      food_category: "Finfish and Shellfish Products" 

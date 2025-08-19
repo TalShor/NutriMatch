@@ -1,169 +1,264 @@
-SR Legacy,FNDDS,Zameret,AUSNUT,MEXT,Baharain
-,,ahuz_ibud_nozlim,,,
-"Alcohol, ethyl",Alcohol (g),alcohol,alcohol_g,Alcohol,
-PUFA 20:4 n-6,,arachidonic,,,
-Arginine,,arginine,,,
-,,biotin,,Biotin,
-SFA 4:0,4:0 (g),butyric,,,
-"Calcium, Ca",Calcium (mg),calcium,calcium_mg,Calcium,
-SFA 10:0,10:0 (g),capric,,,
-SFA 6:0,6:0 (g),caproic,,,
-SFA 8:0,8:0 (g),caprylic,,,
-"Carbohydrate, by difference",Carbohydrate (g),carbohydrates,carbohydrate_g,"Carbohydrate, total, calculated by difference",
-"Carotene, beta","Carotene, beta (mcg)",carotene*,betacarotene_ug,beta-Carotene,
-Cholesterol,Cholesterol (mg),cholesterol,cholesterol_mg,Cholesterol,
-"Choline, total","Choline, total (mg)",choline,,,
-"Copper, Cu",Copper (mg),copper,,Copper,
-Cystine,,cystine,,,
-PUFA 22:6 n-3 (DHA),22:6 n-3 (g),docosahexanoic,22:6n3DHA_g,,
-PUFA 22:5 n-3 (DPA),22:5 n-3 (g),docosapentaenoic,22:5n3DPA_g,,
-PUFA 20:5 n-3 (EPA),20:5 n-3 (g),eicosapentaenoic,20:5n3EPA_g,,
-MUFA 22:1,22:1 (g),erucic,,,
-"Folate, total","Folate, total (mcg)",folate,totalfolate_ug,Folate,
-"Folate, DFE","Folate, DFE (mcg_DFE)",folate_dfe,,,
-Energy,Energy (kcal),food_energy,energy_kcal,Energy (kcal),
-Fructose,,fructose,,,
-MUFA 20:1,20:1 (g),gadoleic,,,
-Histidine,,histidine,,,
-,,iodine,,Iodine,
-"Iron, Fe",Iron (mg),iron,iron_mg,Iron,
-Isoleucine,,isoleucine,,,
-SFA 12:0,12:0 (g),lauric,,,
-Leucine,,leucine,,,
-"PUFA 18:2 n-6 c,c",,linoleic,18:2n6cc_g,,
-"PUFA 18:3 n-3 c,c,c (ALA)",,linolenic,18:3n3cccALA_g,,
-Lysine,,lysine,,,
-"Magnesium, Mg",Magnesium (mg),magnesium,magnesium_mg,Magnesium,
-"Manganese, Mn",,manganese,,Manganese,
-Methionine,,methionine,,,
-Water,Water (g),moisture,water_g,Water,
-"Fatty acids, total monounsaturated","Fatty acids, total monounsaturated (g)",mono_unsaturated_fat,totalmonounsaturatedfattyacids_g,"Fatty acid, mono-unsaturated",
-SFA 14:0,14:0 (g),myristic,,,
-Niacin,Niacin (mg),niacin,niacin_mg,Niacin,
-MUFA 18:1 c,,oleic,,,
-SFA 16:0,16:0 (g),palmitic,,,
-MUFA 16:1 c,,palmitoleic,,,
-Pantothenic acid,,pantothenic_acid,,Pantothenic acid,
-PUFA 18:4,18:4 (g),parinaric,,,
-Phenylalanine,,phenylalanine,,,
-"Phosphorus, P",Phosphorus (mg),phosphorus,phosphorus_mg,Phosphorus,
-"Fatty acids, total polyunsaturated","Fatty acids, total polyunsaturated (g)",poly_unsaturated_fat,totalpolyunsaturatedfattyacids_g,"Fatty acid, poly-unsaturated",
-"Potassium, K",Potassium (mg),potassium,potassium_mg,Potassium,
-Protein,Protein (g),protein,protein_g,"Protein, calculated from reference nitrogen",
-,,psolet,,,
-Riboflavin,Riboflavin (mg),riboflavin,riboflavin_mg,Riboflavin,
-"Fatty acids, total saturated","Fatty acids, total saturated (g)",saturated_fat,totalsaturatedfattyacids_g,"Fatty acid, saturated",
-"Selenium, Se",Selenium (µg),selenium,selenium_ug,Selenium,
-Serine,,serine,,,
-"Sodium, Na",Sodium (mg),sodium,sodium_mg,Sodium,
-SFA 18:0,18:0 (g),stearic,,,
-,,sugar_alcohols,,,
-Thiamin,Thiamin (mg),thiamin,thiamin_mg,Thiamin,
-Threonine,,threonine,,,
-"Fiber, total dietary","Fiber, total dietary (g)",total_dietary_fiber,totaldietaryfiber_g,"Dietary fiber, total",
-Total lipid (fat),Total Fat (g),total_fat,totallipid_g,Lipid,
-"Sugars, Total","Sugars, total (g)",total_sugars,sugarstotal_g,"Carbohydrate, available; expressed in mono-saccharide equivalents",
-"Fatty acids, total trans",,trans_fatty_acids,totaltransfattyacids_g,,
-Tryptophan,,tryptophan,tryptophan_g,,
-Tyrosine,,tyrosine,,,
-Valine,,valine,,,
-"Vitamin A, IU",,vitamin_a_iu,,,
-"Vitamin A, RAE","Vitamin A, RAE (µg_RAE)",vitamin_a_re,raevitamina_ug,Retinol activityequivalents,
-Vitamin B-12,Vitamin B-12 (µg),vitamin_b12,vitaminb12_ug,Vitamin B-12,
-Vitamin B-6,Vitamin B-6 (mg),vitamin_b6,vitaminb6_mg,Vitamin B-6,
-"Vitamin C, total ascorbic acid",Vitamin C (mg),vitamin_c,vitaminc_mg,Ascorbic acid,
-Vitamin D (D2 + D3),Vitamin D (D2 + D3) (µg),vitamin_d,,Vitamin D,
-Vitamin E (alpha-tocopherol),Vitamin E (alpha-tocopherol) (mg),vitamin_e,vitamine_mg,alpha-Tocopherol,
-Vitamin K (phylloquinone),Vitamin K (phylloquinone) (µg),vitamin_k,,Vitamin K,
-"Zinc, Zn",Zinc (mg),zinc,zinc_mg,Zinc,
-,,,,Acetic acid,
-"Carotene, alpha","Carotene, alpha (mcg)",,,alpha-Carotene,
-Ash,,,ash_g,Ash,
-,,,,beta-Caroteneequivalents,
-"Cryptoxanthin, beta","Cryptoxanthin, beta (mcg)",,,beta-Cryptoxanthin,
-"Tocopherol, beta",,,,beta-Tocopherol,
-Caffeine,Caffeine (mg),,caffeine_mg,Caffeine,
-,,,,Chromium,
-,,,,Cooking oil,
-"Tocopherol, delta",,,,delta-Tocopherol,
-,,,,"Dietary fiber, insoluble",
-,,,,"Dietary fiber, soluble",
-,,,energy_kj,Energy (kJ),
-,,,,"Fatty acid, triacyl-glycerol equivalents",
-"Tocopherol, gamma",,,,gamma-Tocopherol,
-,,,,Molybdenum,
-,,,,Nitrate ion,
-,,,,"Organic acids, total",
-,,,,Polyphenol,
-,,,,"Protein, calculated as the sum of amino acid residues",
-Retinol,Retinol (µg),,retinol_ug,Retinol,
-,,,,Salt equivalents,
-,,,,Tannin,
-Theobromine,Theobromine (mg),,,Theobromine,
-Alanine,,,,,
-Aspartic acid,,,,,
-Beta-sitosterol,,,,,
-Betaine,,,,,
-Campesterol,,,,,
-"Fatty acids, total trans-monoenoic",,,,,
-"Fatty acids, total trans-polyenoic",,,,,
-"Fluoride, F",,,,,
-"Folate, food","Folate, food (mcg)",,,,
-Folic acid,Folic acid (mcg),,folicacid_ug,,
-Galactose,,,,,
-Glucose,,,,,
-Glutamic acid,,,,,
-Glycine,,,,,
-Hydroxyproline,,,,,
-Lactose,,,,,
-Lutein + zeaxanthin,Lutein + zeaxanthin (mcg),,,,
-Lycopene,Lycopene (mcg),,,,
-Maltose,,,,,
-MUFA 14:1,,,,,
-MUFA 15:1,,,,,
-MUFA 16:1,16:1 (g),,,,
-MUFA 17:1,,,,,
-MUFA 18:1,18:1 (g),,,,
-MUFA 18:1-11 t (18:1t n-7),,,,,
-MUFA 22:1 c,,,,,
-MUFA 24:1 c,,,,,
-Phytosterols,,,,,
-Proline,,,,,
-PUFA 18:2,18:2 (g),,,,
-PUFA 18:2 CLAs,,,,,
-PUFA 18:2 i,,,,,
-PUFA 18:3,18:3 (g),,,,
-"PUFA 18:3 n-6 c,c,c",,,,,
-PUFA 18:3i,,,,,
-PUFA 2:4 n-6,,,,,
-"PUFA 20:2 n-6 c,c",,,,,
-PUFA 20:3,,,,,
-PUFA 20:3 n-3,,,,,
-PUFA 20:4,20:4 (g),,,,
-PUFA 21:5,,,,,
-PUFA 22:4,,,,,
-SFA 13:0,,,,,
-SFA 15:0,,,,,
-SFA 17:0,,,,,
-SFA 20:0,,,,,
-SFA 22:0,,,,,
-SFA 24:0,,,,,
-Starch,,,starch_g,,
-Stigmasterol,,,,,
-Sucrose,,,,,
-TFA 16:1 t,,,,,
-TFA 18:1 t,,,,,
-TFA 18:2 t not further defined,,,,,
-"TFA 18:2 t,t",,,,,
-TFA 22:1 t,,,,,
-"Tocotrienol, alpha",,,,,
-"Tocotrienol, beta",,,,,
-"Tocotrienol, delta",,,,,
-"Tocotrienol, gamma",,,,,
-"Vitamin B-12, added","Vitamin B-12, added (µg)",,,,
-"Vitamin D (D2 + D3), International Units",,,,,
-Vitamin D2 (ergocalciferol),,,,,
-Vitamin D3 (cholecalciferol),,,,,
-"Vitamin E, added","Vitamin E, added (mg)",,,,
-Vitamin K (Dihydrophylloquinone),,,,,
-Vitamin K (Menaquinone-4),,,,,
+SR Legacy                                 ,FNDDS                                   ,Zameret             ,AUSNUT                          ,MEXT                                                               ,Baharain,FoundationFoods
+,,ahuz_ibud_nozlim    ,,,,
+"Alcohol, ethyl                          ",Alcohol (g)                             ,alcohol             ,alcohol_g                       ,Alcohol                                                            ,,
+PUFA 20:4 n-6                             ,,arachidonic         ,,,,PUFA 20:4
+Arginine                                  ,,arginine            ,,,,Arginine
+,,biotin              ,,Biotin                                                             ,,Biotin
+SFA 4:0                                   ,4:0 (g)                                 ,butyric             ,,,,SFA 4:0
+"Calcium, Ca                             ",Calcium (mg)                            ,calcium             ,calcium_mg                      ,Calcium                                                            ,,"Calcium, Ca"
+SFA 10:0                                  ,10:0 (g)                                ,capric              ,,,,SFA 10:0
+SFA 6:0                                   ,6:0 (g)                                 ,caproic             ,,,,SFA 6:0
+SFA 8:0                                   ,8:0 (g)                                 ,caprylic            ,,,,SFA 8:0
+"Carbohydrate, by difference             ",Carbohydrate (g)                        ,carbohydrates       ,carbohydrate_g                  ,"Carbohydrate, total, calculated by difference                    ",,"Carbohydrate, by difference"
+"Carotene, beta                          ","Carotene, beta (mcg)                  ",carotene*           ,betacarotene_ug                 ,beta-Carotene                                                      ,,"Carotene, beta"
+Cholesterol                               ,Cholesterol (mg)                        ,cholesterol         ,cholesterol_mg                  ,Cholesterol                                                        ,,Cholesterol
+"Choline, total                          ","Choline, total (mg)                   ",choline             ,,,,"Choline, total"
+"Copper, Cu                              ",Copper (mg)                             ,copper              ,,Copper                                                             ,,"Copper, Cu"
+Cystine                                   ,,cystine             ,,,,Cystine
+PUFA 22:6 n-3 (DHA)                       ,22:6 n-3 (g)                            ,docosahexanoic      ,22:6n3DHA_g                     ,,,PUFA 22:6 n-3 (DHA)
+PUFA 22:5 n-3 (DPA)                       ,22:5 n-3 (g)                            ,docosapentaenoic    ,22:5n3DPA_g                     ,,,PUFA 22:5 n-3 (DPA)
+PUFA 20:5 n-3 (EPA)                       ,20:5 n-3 (g)                            ,eicosapentaenoic    ,20:5n3EPA_g                     ,,,PUFA 20:5 n-3 (EPA)
+MUFA 22:1                                 ,22:1 (g)                                ,erucic              ,,,,MUFA 22:1
+"Folate, total                           ","Folate, total (mcg)                   ",folate              ,totalfolate_ug                  ,Folate                                                             ,,"Folate, total"
+"Folate, DFE                             ","Folate, DFE (mcg_DFE)                 ",folate_dfe          ,,,,
+Energy                                    ,Energy (kcal)                           ,food_energy         ,energy_kcal                     ,Energy (kcal)                                                      ,,Energy
+Fructose                                  ,,fructose            ,,,,Fructose
+MUFA 20:1                                 ,20:1 (g)                                ,gadoleic            ,,,,MUFA 20:1
+Histidine                                 ,,histidine           ,,,,Histidine
+,,iodine              ,,Iodine                                                             ,,"Iodine, I"
+"Iron, Fe                                ",Iron (mg)                               ,iron                ,iron_mg                         ,Iron                                                               ,,"Iron, Fe"
+Isoleucine                                ,,isoleucine          ,,,,Isoleucine
+SFA 12:0                                  ,12:0 (g)                                ,lauric              ,,,,SFA 12:0
+Leucine                                   ,,leucine             ,,,,Leucine
+"PUFA 18:2 n-6 c,c                       ",,linoleic            ,18:2n6cc_g                      ,,,"PUFA 18:2 n-6 c,c"
+"PUFA 18:3 n-3 c,c,c (ALA)               ",,linolenic           ,18:3n3cccALA_g                  ,,,"PUFA 18:3 n-3 c,c,c (ALA)"
+Lysine                                    ,,lysine              ,,,,Lysine
+"Magnesium, Mg                           ",Magnesium (mg)                          ,magnesium           ,magnesium_mg                    ,Magnesium                                                          ,,"Magnesium, Mg"
+"Manganese, Mn                           ",,manganese           ,,Manganese                                                          ,,"Manganese, Mn"
+Methionine                                ,,methionine          ,,,,Methionine
+Water                                     ,Water (g)                               ,moisture            ,water_g                         ,Water                                                              ,,Water
+"Fatty acids, total monounsaturated      ","Fatty acids, total monounsaturated (g)",mono_unsaturated_fat,totalmonounsaturatedfattyacids_g,"Fatty acid, mono-unsaturated                                     ",,"Fatty acids, total monounsaturated"
+SFA 14:0                                  ,14:0 (g)                                ,myristic            ,,,,SFA 14:0
+Niacin                                    ,Niacin (mg)                             ,niacin              ,niacin_mg                       ,Niacin                                                             ,,Niacin
+MUFA 18:1 c                               ,,oleic               ,,,,MUFA 18:1 c
+SFA 16:0                                  ,16:0 (g)                                ,palmitic            ,,,,SFA 16:0
+MUFA 16:1 c                               ,,palmitoleic         ,,,,MUFA 16:1 c
+Pantothenic acid                          ,,pantothenic_acid    ,,Pantothenic acid                                                   ,,Pantothenic acid
+PUFA 18:4                                 ,18:4 (g)                                ,parinaric           ,,,,PUFA 18:4
+Phenylalanine                             ,,phenylalanine       ,,,,Phenylalanine
+"Phosphorus, P                           ",Phosphorus (mg)                         ,phosphorus          ,phosphorus_mg                   ,Phosphorus                                                         ,,"Phosphorus, P"
+"Fatty acids, total polyunsaturated      ","Fatty acids, total polyunsaturated (g)",poly_unsaturated_fat,totalpolyunsaturatedfattyacids_g,"Fatty acid, poly-unsaturated                                     ",,"Fatty acids, total polyunsaturated"
+"Potassium, K                            ",Potassium (mg)                          ,potassium           ,potassium_mg                    ,Potassium                                                          ,,"Potassium, K"
+Protein                                   ,Protein (g)                             ,protein             ,protein_g                       ,"Protein, calculated from reference nitrogen                      ",,Protein
+,,psolet              ,,,,
+Riboflavin                                ,Riboflavin (mg)                         ,riboflavin          ,riboflavin_mg                   ,Riboflavin                                                         ,,Riboflavin
+"Fatty acids, total saturated            ","Fatty acids, total saturated (g)      ",saturated_fat       ,totalsaturatedfattyacids_g      ,"Fatty acid, saturated                                            ",,"Fatty acids, total saturated"
+"Selenium, Se                            ",Selenium (µg)                           ,selenium            ,selenium_ug                     ,Selenium                                                           ,,"Selenium, Se"
+Serine                                    ,,serine              ,,,,Serine
+"Sodium, Na                              ",Sodium (mg)                             ,sodium              ,sodium_mg                       ,Sodium                                                             ,,"Sodium, Na"
+SFA 18:0                                  ,18:0 (g)                                ,stearic             ,,,,SFA 18:0
+,,sugar_alcohols      ,,,,
+Thiamin                                   ,Thiamin (mg)                            ,thiamin             ,thiamin_mg                      ,Thiamin                                                            ,,Thiamin
+Threonine                                 ,,threonine           ,,,,Threonine
+"Fiber, total dietary                    ","Fiber, total dietary (g)              ",total_dietary_fiber ,totaldietaryfiber_g             ,"Dietary fiber, total                                             ",,"Fiber, total dietary"
+Total lipid (fat)                         ,Total Fat (g)                           ,total_fat           ,totallipid_g                    ,Lipid                                                              ,,Total lipid (fat)
+"Sugars, Total                           ","Sugars, total (g)                     ",total_sugars        ,sugarstotal_g                   ,"Carbohydrate, available; expressed in mono-saccharide equivalents",,"Sugars, Total"
+"Fatty acids, total trans                ",,trans_fatty_acids   ,totaltransfattyacids_g          ,,,"Fatty acids, total trans"
+Tryptophan                                ,,tryptophan          ,tryptophan_g                    ,,,Tryptophan
+Tyrosine                                  ,,tyrosine            ,,,,Tyrosine
+Valine                                    ,,valine              ,,,,Valine
+"Vitamin A, IU                           ",,vitamin_a_iu        ,,,,
+"Vitamin A, RAE                          ","Vitamin A, RAE (µg_RAE)               ",vitamin_a_re        ,raevitamina_ug                  ,Retinol activityequivalents                                        ,,"Vitamin A, RAE"
+Vitamin B-12                              ,Vitamin B-12 (µg)                       ,vitamin_b12         ,vitaminb12_ug                   ,Vitamin B-12                                                       ,,Vitamin B-12
+Vitamin B-6                               ,Vitamin B-6 (mg)                        ,vitamin_b6          ,vitaminb6_mg                    ,Vitamin B-6                                                        ,,Vitamin B-6
+"Vitamin C, total ascorbic acid          ",Vitamin C (mg)                          ,vitamin_c           ,vitaminc_mg                     ,Ascorbic acid                                                      ,,"Vitamin C, total ascorbic acid"
+Vitamin D (D2 + D3)                       ,Vitamin D (D2 + D3) (µg)                ,vitamin_d           ,,Vitamin D                                                          ,,Vitamin D (D2 + D3)
+Vitamin E (alpha-tocopherol)              ,Vitamin E (alpha-tocopherol) (mg)       ,vitamin_e           ,vitamine_mg                     ,alpha-Tocopherol                                                   ,,Vitamin E (alpha-tocopherol)
+Vitamin K (phylloquinone)                 ,Vitamin K (phylloquinone) (µg)          ,vitamin_k           ,,Vitamin K                                                          ,,Vitamin K (phylloquinone)
+"Zinc, Zn                                ",Zinc (mg)                               ,zinc                ,zinc_mg                         ,Zinc                                                               ,,"Zinc, Zn"
+,,,,Acetic acid                                                        ,,
+"Carotene, alpha                         ","Carotene, alpha (mcg)                 ",,,alpha-Carotene                                                     ,,"Carotene, alpha"
+Ash                                       ,,,ash_g                           ,Ash                                                                ,,Ash
+,,,,beta-Caroteneequivalents                                           ,,
+"Cryptoxanthin, beta                     ","Cryptoxanthin, beta (mcg)             ",,,beta-Cryptoxanthin                                                 ,,"Cryptoxanthin, beta"
+"Tocopherol, beta                        ",,,,beta-Tocopherol                                                    ,,"Tocopherol, beta"
+Caffeine                                  ,Caffeine (mg)                           ,,caffeine_mg                     ,Caffeine                                                           ,,
+,,,,Chromium                                                           ,,
+,,,,Cooking oil                                                        ,,
+"Tocopherol, delta                       ",,,,delta-Tocopherol                                                   ,,"Tocopherol, delta"
+,,,,"Dietary fiber, insoluble                                         ",,"Fiber, insoluble"
+,,,,"Dietary fiber, soluble                                           ",,"Fiber, soluble"
+,,,energy_kj                       ,Energy (kJ)                                                        ,,
+,,,,"Fatty acid, triacyl-glycerol equivalents                         ",,
+"Tocopherol, gamma                       ",,,,gamma-Tocopherol                                                   ,,"Tocopherol, gamma"
+,,,,Molybdenum                                                         ,,"Molybdenum, Mo"
+,,,,Nitrate ion                                                        ,,
+,,,,"Organic acids, total                                             ",,
+,,,,Polyphenol                                                         ,,
+,,,,"Protein, calculated as the sum of amino acid residues            ",,
+Retinol                                   ,Retinol (µg)                            ,,retinol_ug                      ,Retinol                                                            ,,Retinol
+,,,,Salt equivalents                                                   ,,
+,,,,Tannin                                                             ,,
+Theobromine                               ,Theobromine (mg)                        ,,,Theobromine                                                        ,,
+Alanine                                   ,,,,,,Alanine
+Aspartic acid                             ,,,,,,Aspartic acid
+Beta-sitosterol                           ,,,,,,Beta-sitosterol
+Betaine                                   ,,,,,,Betaine
+Campesterol                               ,,,,,,Campesterol
+"Fatty acids, total trans-monoenoic      ",,,,,,"Fatty acids, total trans-monoenoic"
+"Fatty acids, total trans-polyenoic      ",,,,,,
+"Fluoride, F                             ",,,,,,
+"Folate, food                            ","Folate, food (mcg)                    ",,,,,
+Folic acid                                ,Folic acid (mcg)                        ,,folicacid_ug                    ,,,
+Galactose                                 ,,,,,,Galactose
+Glucose                                   ,,,,,,Glucose
+Glutamic acid                             ,,,,,,Glutamic acid
+Glycine                                   ,,,,,,Glycine
+Hydroxyproline                            ,,,,,,Hydroxyproline
+Lactose                                   ,,,,,,Lactose
+Lutein + zeaxanthin                       ,Lutein + zeaxanthin (mcg)               ,,,,,Lutein + zeaxanthin
+Lycopene                                  ,Lycopene (mcg)                          ,,,,,Lycopene
+Maltose                                   ,,,,,,Maltose
+MUFA 14:1                                 ,,,,,,MUFA 14:1 c
+MUFA 15:1                                 ,,,,,,MUFA 15:1
+MUFA 16:1                                 ,16:1 (g)                                ,,,,,
+MUFA 17:1                                 ,,,,,,MUFA 17:1
+MUFA 18:1                                 ,18:1 (g)                                ,,,,,MUFA 18:1
+MUFA 18:1-11 t (18:1t n-7)                ,,,,,,
+MUFA 22:1 c                               ,,,,,,MUFA 22:1 c
+MUFA 24:1 c                               ,,,,,,MUFA 24:1 c
+Phytosterols                              ,,,,,,
+Proline                                   ,,,,,,Proline
+PUFA 18:2                                 ,18:2 (g)                                ,,,,,PUFA 18:2
+PUFA 18:2 CLAs                            ,,,,,,PUFA 18:2 CLAs
+PUFA 18:2 i                               ,,,,,,
+PUFA 18:3                                 ,18:3 (g)                                ,,,,,PUFA 18:3
+"PUFA 18:3 n-6 c,c,c                     ",,,,,,"PUFA 18:3 n-6 c,c,c"
+PUFA 18:3i                                ,,,,,,
+PUFA 2:4 n-6                              ,,,,,,
+"PUFA 20:2 n-6 c,c                       ",,,,,,"PUFA 20:2 n-6 c,c"
+PUFA 20:3                                 ,,,,,,PUFA 20:3
+PUFA 20:3 n-3                             ,,,,,,PUFA 20:3 n-3
+PUFA 20:4                                 ,20:4 (g)                                ,,,,,
+PUFA 21:5                                 ,,,,,,
+PUFA 22:4                                 ,,,,,,PUFA 22:4
+SFA 13:0                                  ,,,,,,
+SFA 15:0                                  ,,,,,,SFA 15:0
+SFA 17:0                                  ,,,,,,SFA 17:0
+SFA 20:0                                  ,,,,,,SFA 20:0
+SFA 22:0                                  ,,,,,,SFA 22:0
+SFA 24:0                                  ,,,,,,SFA 24:0
+Starch                                    ,,,starch_g                        ,,,Starch
+Stigmasterol                              ,,,,,,Stigmasterol
+Sucrose                                   ,,,,,,Sucrose
+TFA 16:1 t                                ,,,,,,TFA 16:1 t
+TFA 18:1 t                                ,,,,,,TFA 18:1 t
+TFA 18:2 t not further defined            ,,,,,,TFA 18:2 t not further defined
+"TFA 18:2 t,t                            ",,,,,,
+TFA 22:1 t                                ,,,,,,TFA 22:1 t
+"Tocotrienol, alpha                      ",,,,,,"Tocotrienol, alpha"
+"Tocotrienol, beta                       ",,,,,,"Tocotrienol, beta"
+"Tocotrienol, delta                      ",,,,,,"Tocotrienol, delta"
+"Tocotrienol, gamma                      ",,,,,,"Tocotrienol, gamma"
+"Vitamin B-12, added                     ","Vitamin B-12, added (µg)              ",,,,,
+"Vitamin D (D2 + D3), International Units",,,,,,"Vitamin D (D2 + D3), International Units"
+Vitamin D2 (ergocalciferol)               ,,,,,,Vitamin D2 (ergocalciferol)
+Vitamin D3 (cholecalciferol)              ,,,,,,Vitamin D3 (cholecalciferol)
+"Vitamin E, added                        ","Vitamin E, added (mg)                 ",,,,,
+Vitamin K (Dihydrophylloquinone)          ,,,,,,Vitamin K (Dihydrophylloquinone)
+Vitamin K (Menaquinone-4)                 ,,,,,,Vitamin K (Menaquinone-4)
+,,,,,,10-Formyl folic acid (10HCOFA)
+,,,,,,25-hydroxycholecalciferol
+,,,,,,5-Formyltetrahydrofolic acid (5-HCOH4
+,,,,,,5-methyl tetrahydrofolate (5-MTHF)
+,,,,,,Beta-glucan
+,,,,,,Beta-sitostanol
+,,,,,,"Boron, B"
+,,,,,,Brassicasterol
+,,,,,,Campestanol
+,,,,,,"Carbohydrate, by summation"
+,,,,,,"Carotene, gamma"
+,,,,,,"Choline, free"
+,,,,,,"Choline, from glycerophosphocholine"
+,,,,,,"Choline, from phosphocholine"
+,,,,,,"Choline, from phosphotidyl choline"
+,,,,,,"Choline, from sphingomyelin"
+,,,,,,Citric acid
+,,,,,,"Cobalt, Co"
+,,,,,,"Cryptoxanthin, alpha"
+,,,,,,Cysteine
+,,,,,,Daidzein
+,,,,,,Daidzin
+,,,,,,Delta-5-avenasterol
+,,,,,,Delta-7-Stigmastenol
+,,,,,,Energy (Atwater General Factors)
+,,,,,,Energy (Atwater Specific Factors)
+,,,,,,"Ergosta-5,7-dienol"
+,,,,,,"Ergosta-7,22-dienol"
+,,,,,,Ergosta-7-enol
+,,,,,,Ergosterol
+,,,,,,Ergothioneine
+,,,,,,"Fatty acids, total trans-dienoic"
+,,,,,,"Fatty acids, total trans-polyenoic"
+,,,,,,Genistein
+,,,,,,Genistin
+,,,,,,Glutathione
+,,,,,,Glycitin
+,,,,,,High Molecular Weight Dietary Fiber (HMWDF)
+,,,,,,Low Molecular Weight Dietary Fiber (LMWDF)
+,,,,,,Lutein
+,,,,,,MUFA 12:1
+,,,,,,MUFA 17:1 c
+,,,,,,MUFA 20:1 c
+,,,,,,MUFA 22:1 n-11
+,,,,,,MUFA 22:1 n-9
+,,,,,,Malic acid
+,,,,,,"Nickel, Ni"
+,,,,,,Nitrogen
+,,,,,,Oxalic acid
+,,,,,,PUFA 18:2 c
+,,,,,,PUFA 18:3 c
+,,,,,,PUFA 18:3i
+,,,,,,PUFA 20:2 c
+,,,,,,PUFA 20:3 c
+,,,,,,PUFA 20:3 n-6
+,,,,,,PUFA 20:3 n-9
+,,,,,,PUFA 20:4c
+,,,,,,PUFA 20:5c
+,,,,,,PUFA 22:2
+,,,,,,PUFA 22:3
+,,,,,,PUFA 22:5 c
+,,,,,,PUFA 22:6 c
+,,,,,,Phytoene
+,,,,,,Phytofluene
+,,,,,,"Phytosterols, other"
+,,,,,,Pyruvic acid
+,,,,,,Quinic acid
+,,,,,,Raffinose
+,,,,,,Resistant starch
+,,,,,,SFA 11:0
+,,,,,,SFA 21:0
+,,,,,,SFA 23:0
+,,,,,,SFA 5:0
+,,,,,,SFA 7:0
+,,,,,,SFA 9:0
+,,,,,,Specific Gravity
+,,,,,,Stachyose
+,,,,,,Stigmastadiene
+,,,,,,"Sulfur, S"
+,,,,,,TFA 14:1 t
+,,,,,,TFA 18:2 t
+,,,,,,TFA 18:3 t
+,,,,,,TFA 20:1 t
+,,,,,,Total Sugars
+,,,,,,Total dietary fiber (AOAC 2011.25)
+,,,,,,Total fat (NLEA)
+,,,,,,Verbascose
+,,,,,,Vitamin A
+,,,,,,Vitamin D4
+,,,,,,Zeaxanthin
+,,,,,,cis-Lutein/Zeaxanthin
+,,,,,,cis-Lycopene
+,,,,,,cis-beta-Carotene
+,,,,,,trans-Lycopene
+,,,,,,trans-beta-Carotene

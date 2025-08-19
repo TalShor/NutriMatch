@@ -2,6 +2,7 @@ import concurrent.futures
 import json
 import os
 import pathlib
+from enum import Enum
 from itertools import count
 from pathlib import Path
 
@@ -212,6 +213,9 @@ def get_translation(
 
     # shouldn't have an index
     data = data.reset_index(drop=True)
+
+    # TODO - replace all enum values in the df with their value
+    data = data.applymap(lambda x: x.value if isinstance(x, Enum) else x)
 
     # Prepare the batches
     batches = [data.iloc[i : i + batch_size] for i in range(0, len(data), batch_size)]

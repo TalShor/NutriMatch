@@ -13,6 +13,12 @@ from ...base_classes.base_data_digestion import BaseDataDigestion
 class FNDDSDataDigestion(BaseDataDigestion):
     def __init__(self, *args, **kwargs):
         # The base class handles downloading and saving.  Pass the FCDB name.
+        self.translate_nutrients_dict = (
+            pd.read_csv(Path(__file__).parents[3] / "data/Nutrient_Name_Matching.csv")
+            .dropna(subset=["FNDDS", "SR Legacy"])
+            .set_index("FNDDS")["SR Legacy"]
+            .to_dict()
+        )
         super().__init__(fcdb_name="FNDDS", *args, **kwargs)
 
     #
@@ -53,12 +59,19 @@ class FNDDSDataDigestion(BaseDataDigestion):
 
     def standardise_data(self) -> pd.DataFrame:
         df = self.raw_data.rename(columns={"description": "food_name"})
-
+        df.columns = df.columns.str.replace("\n", " ")
         yaml_path = Path(__file__).parent / "food_categories_and_subcategories.yaml"
         categories = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
 
         df["food_category"] = df["WWEIA Category description"].map(categories)
-
+        df.rename(
+            columns={
+                "WWEIA Category description": "food_subcategory",
+                "Main food description": "description",
+            },
+            inplace=True,
+        )
+        df = df.rename(columns=self.translate_nutrients_dict)
         return df
 
 

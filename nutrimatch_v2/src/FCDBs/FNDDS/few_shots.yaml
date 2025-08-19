@@ -1,0 +1,103 @@
+example_1:
+  sr_legacy:
+    origin:
+      description: "Lentils, sprouted, raw"
+      food_category: "PROTEIN FOODS"
+      food_subcategory: "Beans, peas, legumes"
+    target:
+      description: "Lentils, sprouted, raw"
+      food_category: "Legumes and Legume Products"
+
+
+example_2:
+  sr_legacy:
+    origin:
+      description: "Spinach, fresh, cooked, drained, with salt, no fat added"
+      food_category: "VEGETABLES"
+      food_subcategory: "Spinach"
+    target:
+      description: "Spinach, fresh, cooked, drained, with salt, no fat added"
+      food_category: "Vegetables and Vegetable Products"
+
+
+example_3:
+  sr_legacy:
+    origin:
+      description: "Candies, dark chocolate, no added sugar"
+      food_category: "SNACKS AND SWEETS"
+      food_subcategory: "Candy containing chocolate"
+    target:
+      description: "Candies, dark chocolate, no added sugar"
+      food_category: "Sweets"
+
+
+example_4:
+  sr_legacy:
+    origin:
+      description: "Chicken, breast, breaded, fried in canola oil, with sesame"
+      food_category: "PROTEIN FOODS"
+      food_subcategory: "Chicken patties, nuggets and tenders"
+    target:
+      description: "Chicken, breast, breaded, fried in canola oil, with sesame"
+      food_category: "Poultry Products"
+
+
+example_5:
+  sr_legacy:
+    origin:
+      description: "Beef, cured, dried, jerky"
+      food_category: "PROTEIN FOODS"
+      food_subcategory: "Beef, excludes ground"
+    target:
+      description: "Beef, cured, dried, jerky"
+      food_category: "Beef Products"
+      common_name: "Beef jerky"
+
+
+example_6:
+  sr_legacy:
+    origin:
+      description: "Chicken, breast, grilled, marinated"
+      food_category: "PROTEIN FOODS"
+      food_subcategory: "Chicken, whole pieces"
+    target:
+      description: "Chicken, breast, grilled, marinated"
+      food_category: "Poultry Products"
+      common_name: "Grilled chicken breast"
+
+
+example_7:
+  sr_legacy:
+    origin:
+      description: "Fish, ocean perch, raw"
+      food_category: "PROTEIN FOODS"
+      food_subcategory: "Fish"
+    target:
+      description: "Fish, ocean perch, raw"
+      food_category: "Finfish and Shellfish Products"
+      common_name: "Raw ocean perch"
+
+
+example_8:
+  sr_legacy:
+    origin:
+      description: "Chicken sandwich, crispy, with roll"
+      food_category: "MIXED DISHES"
+      food_subcategory: "Chicken fillet sandwiches"
+    target:
+      description: "Chicken sandwich, crispy, with roll"
+      food_category: "Fast Foods"
+      common_name: "Crispy chicken sandwich"
+
+
+example_9:
+  sr_legacy:
+    origin:
+      description: "Chicken and eggs wat, Ethiopian dish"
+      food_category: "MIXED DISHES"
+      food_subcategory: "Poultry mixed dishes"
+    target:
+      description: "Chicken and eggs wat, Ethiopian dish"
+      food_category: "Meals, Entrees, and Side Dishes"
+      common_name: "Chicken and eggs wat"
+

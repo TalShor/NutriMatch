@@ -47,7 +47,6 @@ if __name__ == "__main__":
         single_fcdb2_to_multiple_fcdb1_matches = pd.read_parquet(comparison_path_2in1)
 
     # get the SR Legacy columns for both of them before the comparison.
-
     single_fcdb1_to_multiple_fcdb2_matches = (
         single_fcdb1_to_multiple_fcdb2_matches.assign(
             str_const=lambda df: df[args.fcdb1].astype(str)

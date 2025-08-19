@@ -2,6 +2,9 @@ import argparse
 
 from src.base_classes.base_data_digestion import BaseDataDigestion
 from src.FCDBs.FNDDS.digest_raw_data import FNDDSDataDigestion  # noqa: F401
+from src.FCDBs.FoundationFoods.digest_raw_data import (
+    FoundationFoodsDataDigestion,  # noqa: F401
+)
 from src.FCDBs.HPP.digest_raw_data import HPPDataDigestion  # noqa: F401
 from src.FCDBs.SR_legacy.digest_raw_data import SR_LegacyDataDigestion  # noqa: F401
 from src.FCDBs.Zameret.digest_raw_data import ZameretDataDigestion  # noqa: F401
