@@ -37,6 +37,7 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import os
+from ast import literal_eval
 from typing import List
 
 import openai
@@ -49,7 +50,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from .exact_matcher import ExactFoodMatcher
+# from .exact_matcher import ExactFoodMatcher
 
 # ---------------------------------------------------------------------------
 # helper – check equivalence of candidates vs. reference
@@ -404,7 +405,93 @@ def _query_equivalence_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
 
     # Extract raw JSON arguments
     try:
+        # save the response to a file
         tool_call = response.choices[0].message.tool_calls[0]
+
+        # Convert batch_df to records for including input data
+        input_data = batch_df.to_dict(orient="records")
+
+        # Convert tool_call to a serializable format
+        tool_call_dict = {
+            "id": tool_call.id,
+            "type": tool_call.type,
+            "function": {
+                "name": tool_call.function.name,
+                "arguments": tool_call.function.arguments,
+            },
+        }
+
+        # Parse the GPT response to get equivalence results
+        parsed_response = json.loads(tool_call.function.arguments)
+        equivalences = parsed_response["equivalences"]
+
+        # Get the actual column names from the batch_df
+        col_names = list(batch_df.columns)
+        col_reference = col_names[0]  # First column is reference
+        col_candidates = col_names[1]  # Second column is candidates
+
+        # Create simplified output with descriptions and boolean flags
+        simplified_results = []
+        for i, row in enumerate(input_data):
+            # Extract just the description text from reference
+            reference_value = row[col_reference]
+            if isinstance(reference_value, dict):
+                reference_desc = reference_value.get(
+                    "description", str(reference_value)
+                )
+            elif isinstance(reference_value, str):
+                try:
+                    # Try to parse as dict if it's a string representation
+                    parsed = eval(reference_value)
+                    reference_desc = (
+                        parsed.get("description", reference_value)
+                        if isinstance(parsed, dict)
+                        else reference_value
+                    )
+                except:
+                    reference_desc = reference_value
+            else:
+                reference_desc = str(reference_value)
+
+            candidates_with_flags = []
+            for j, candidate in enumerate(row[col_candidates]):
+                # Extract just the description text from candidate
+                if isinstance(candidate, dict):
+                    candidate_desc = candidate.get("description", str(candidate))
+                elif isinstance(candidate, str):
+                    try:
+                        # Try to parse as dict if it's a string representation
+                        parsed = eval(candidate)
+                        candidate_desc = (
+                            parsed.get("description", candidate)
+                            if isinstance(parsed, dict)
+                            else candidate
+                        )
+                    except:
+                        candidate_desc = candidate
+                else:
+                    candidate_desc = str(candidate)
+
+                is_equivalent = equivalences[i]["is_equivalent"][j]
+                candidates_with_flags.append(
+                    {"description": candidate_desc, "is_equivalent": is_equivalent}
+                )
+
+            simplified_results.append(
+                {"reference": reference_desc, "candidates": candidates_with_flags}
+            )
+
+        # Create comprehensive response with both formats
+        comprehensive_response = {
+            "simplified_results": simplified_results,
+            "batch_size": len(batch_df),
+            "full_gpt_response": tool_call_dict,
+            "verification_info": "simplified_results shows reference description with candidates and their equivalence flags",
+        }
+
+        with open("gpt_response.json", "w") as f:
+            json.dump(comprehensive_response, f, indent=2)
+
         raw_args: str = tool_call.function.arguments  # type: ignore[attr-defined]
     except (AttributeError, IndexError):
         raise RuntimeError("GPT response missing tool-call arguments")
@@ -463,61 +550,21 @@ def are_equal_dataframe(
     def _ensure_obj(val):
         return val if not isinstance(val, str) else json.loads(val)
 
-    work_df = df.copy()
-
     # Prepare the data for GPT processing
-    work_df["reference"] = work_df[col_reference].apply(str)
-    work_df["candidates"] = work_df[col_candidates].apply(
-        lambda x: [str(item) for item in x] if isinstance(x, list) else [str(x)]
+    # TODO: make this a group by and then do the exact matching
+    work_df = (
+        df.copy()
+        .astype({col_reference: str, col_candidates: str})
+        .groupby(col_reference)[col_candidates]
+        .apply(list)
+        .to_frame()
+        .reset_index()
     )
 
-    # Pre-filter with exact matching for performance and accuracy
-    print("[Exact-matching] Pre-filtering obvious matches...")
-    exact_matcher = ExactFoodMatcher()
-
-    def _apply_exact_matching(row):
-        """Apply exact matching and mark which candidates need GPT processing."""
-        reference_desc = _ensure_obj(row["reference"]).get("description", "")
-        candidates = row["candidates"]
-
-        candidate_descs = []
-
-        for candidate in candidates:
-            candidate_desc = _ensure_obj(candidate).get("description", "")
-            candidate_descs.append(candidate_desc)
-
-        # Get exact matches
-        exact_results = exact_matcher.find_exact_matches(
-            reference_desc, candidate_descs
-        )
-
-        # Store exact match results and mark which need GPT
-        row["exact_matches"] = exact_results
-        row["needs_gpt"] = not all(
-            exact_results
-        )  # Only send to GPT if not all exact matches
-
-        return row
-
-    work_df = work_df.apply(_apply_exact_matching, axis=1)
-
-    # Filter to only rows that need GPT processing
-    gpt_df = work_df[work_df["needs_gpt"]].copy()
-    exact_only_df = work_df[~work_df["needs_gpt"]].copy()
-
-    print(
-        f"[Exact-matching] {len(exact_only_df)} rows solved by exact matching, {len(gpt_df)} need GPT"
-    )
-
-    # Handle exact-only results first
-    if len(exact_only_df) > 0:
-        exact_only_df["is_equivalent"] = exact_only_df["exact_matches"]
-
-    # Process remaining rows with GPT if any
-    if len(gpt_df) > 0:
+    if len(work_df) > 0:
         # Split GPT rows into batches
         batches = [
-            gpt_df.iloc[i : i + batch_size] for i in range(0, len(gpt_df), batch_size)
+            work_df.iloc[i : i + batch_size] for i in range(0, len(work_df), batch_size)
         ]
 
         # Parallel GPT execution
@@ -540,36 +587,24 @@ def are_equal_dataframe(
                         f"Failed GPT equivalence check for batch {idx}"
                     ) from exc
 
-        gpt_results_df = pd.concat(results).sort_index()
+        work_df["is_equivalent"] = pd.concat(results)
+        work_df = (
+            work_df.set_index(col_reference)
+            .apply(
+                lambda row: list(zip(row[col_candidates], row["is_equivalent"])),
+                axis=1,
+            )
+            .explode()
+            .apply(pd.Series)
+            .rename(columns={0: col_candidates, 1: "is_equivalent"})
+            .reset_index()
+            .assign(**{col_reference: lambda df: df[col_reference].apply(literal_eval)})
+            .assign(
+                **{col_candidates: lambda df: df[col_candidates].apply(literal_eval)}
+            )
+        )
+        # TODO: somethings is off with the numbers here.
+        work_df["embedding_similarity"] = df["embedding_similarity"].values
+        return work_df
 
-        # Merge exact matches with GPT results for partial matches
-        def _merge_results(row):
-            """Merge exact match results with GPT results where needed."""
-            if row.name in gpt_results_df.index:
-                gpt_results = gpt_results_df.loc[row.name, "is_equivalent"]
-                exact_results = row["exact_matches"]
-
-                # Use exact matches where available, GPT otherwise
-                final_results = []
-                for i, (exact_match, gpt_result) in enumerate(
-                    zip(exact_results, gpt_results)
-                ):
-                    final_results.append(exact_match if exact_match else gpt_result)
-
-                return final_results
-            else:
-                return row["exact_matches"]  # Pure exact matches
-
-        gpt_df["is_equivalent"] = gpt_df.apply(_merge_results, axis=1)
-
-        # Combine all results
-        equivalence_df = pd.concat([exact_only_df, gpt_df]).sort_index()
-    else:
-        # Only exact matches
-        equivalence_df = exact_only_df
-
-    # Add results to original dataframe
-    result_df = df.copy()
-    result_df["is_equivalent"] = equivalence_df["is_equivalent"].values
-
-    return result_df
+    return df

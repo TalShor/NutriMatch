@@ -80,8 +80,6 @@ class BaseDataDigestion:
         # 4. GPT translation
         # ------------------------------------------------------------------
 
-        exit(1)
-
         # If it's SR_Legacy, we need don't need to run translation - just copy the columns with a suffix.
         def sr_legacy_translation():
             df = self.standardised_data.copy().reset_index()
