@@ -50,7 +50,7 @@ from tenacity import (
     wait_exponential,
 )
 
-# from .exact_matcher import ExactFoodMatcher
+from ..syntax_matching.exact_matcher import FoodDescriptionNormalizer
 
 # ---------------------------------------------------------------------------
 # helper – check equivalence of candidates vs. reference
@@ -60,96 +60,11 @@ from tenacity import (
 _SYSTEM_PROMPT_EQUIVALENCE = {
     "role": "system",
     "content": (
-        "You are a certified dietitian specialising in food substitution.\n\n"
-        "INPUT (per element):\n"
-        "• reference – a food description\n"
-        "• candidates – 1…N alternative descriptions\n"
-        "OUTPUT: Return ONLY the function-call with "
-        '{ "equivalences": [ { "is_equivalent": [bool, bool, ...] } … ] }.\n'
-        "Each boolean indicates whether the corresponding candidate is nutritionally equivalent to the reference.\n\n"
-        "----------------------------------------------------------------------\n"
-        "EQUIVALENCE CRITERIA (prioritize exact matches, then strict rules)\n"
-        "0. EXACT MATCH PRIORITY – If descriptions refer to identical foods with only trivial wording differences (word order, singular/plural, synonyms), return True immediately. Examples:\n"
-        "   • 'almonds, dry roasted, salted' ≈ 'nuts, almonds, dry roasted, with salt added' = TRUE\n"
-        "   • 'blanched almonds' ≈ 'nuts, almonds, blanched' = TRUE\n"
-        "   • 'basil, fresh' ≈ 'basil, fresh' = TRUE\n"
-        "1. Core Food Identity – EXACT SAME primary food (species/plant/animal, cut). NO cross-species: beets≠radishes, blueberries≠strawberries, asparagus≠broccoli, brazil nuts≠cashews.\n"
-        "2. Processing State Sensitivity:\n"
-        "   • Raw ≠ cooked (significant nutritional differences)\n"
-        "   • Sweetened ≠ unsweetened (significant calorie differences)\n"
-        "   • Fresh ≈ frozen (if same state), but ≠ canned ≠ dried ≠ pickled\n"
-        "   • Similar cooking methods: boiled≈steamed≈poached for same food\n"
-        "3. Minor Additions – Salt, herbs, spices in small amounts are equivalent. 'With salt' ≈ 'without salt' for same food.\n"
-        "4. Food Group – Must be same USDA Food Group.\n"
-        "5. Threshold – Return True ONLY if ALL criteria satisfied. When uncertain, return False.\n\n"
-        "----------------------------------------------------------------------\n"
-        "SCENARIO-SPECIFIC GUIDELINES (augment rules above)\n"
-        "• Plant-based milks vs. dairy milk: treat fortified soy/almond/oat milks "
-        "as equivalent to low-fat or skim cow milk if macros fit.\n"
-        "• Low-sugar or sugar-free desserts: sucrose↔sweetener swap is acceptable "
-        "if calories stay within ±15 %.\n"
-        "• Gluten-free baked goods: GF bread/crackers may be equivalent to wheat "
-        "variants as long as grain base and macros align (e.g., rice bread vs. "
-        "white bread).\n"
-        "• Composite dishes: All MAIN ingredients + cooking method must match; "
-        "sauces or herbs may differ. E.g., 'baked salmon with lemon' ≈ 'baked "
-        "salmon, plain'. Treat 'ready-to-eat' vs. 'raw ingredient' as different "
-        "states.\n"
-        "• Fermented dairy: yogurt ↔ kefir ↔ labneh may be equivalent if fat% and "
-        "added sugar comparable.\n"
-        "• Cheese fat levels: 5 % vs. 8 % is acceptable; 5 % vs. 30 % is not.\n"
-        "• Oils and spreads: Avocado oil ↔ olive oil but NOT ↔ butter.\n"
-        "• Fortified juices: presence of added vitamins is ignored if macros match.\n"
-        "• Meat form: SAME muscle-cut or slice is equivalent; ground/minced or cured are different unless specifically similar cuts.\n"
-        "• Species priority: Different species are NEVER equivalent (banana≠plantain, beef≠turkey, brazil nuts≠cashews).\n"
-        "• Processing sensitivity: Sweetened≠unsweetened, cooked≠raw, chips≠raw fruit.\n"
-        "• Exact word matching: Focus on food substance, not packaging language.\n\n"
-        "----------------------------------------------------------------------\n"
-        "ALIAS / SYNONYM CHEAT-SHEET (non-exhaustive; treat as SAME food for "
-        "rules 1-3)\n"
-        "— Cheeses —\n"
-        "  Kashkaval → Gouda/Edam/Cheddar family (semi-hard yellow cheese)\n"
-        "  Pecorino, Manchego → hard/semi-hard sheep cheese (Parmesan-like)\n"
-        "  Halloumi → brined grilling cheese (close to Feta in salt/fat)\n"
-        "  Tzfatit, 'salty cheese', 'white cheese' → brined fresh cheese (≈ Feta)\n"
-        "  Labneh → strained yogurt / cream-cheese style spread\n"
-        "  Port de Salut → semi-soft cow cheese (like Muenster)\n"
-        "— Milks & Yogurts —\n"
-        "  Almond/oat/soy milk → plant milk category (use fat-free or low-fat milk "
-        "as proxy when macros match)\n"
-        "  'Producer milk' → whole cow milk\n"
-        "— Breads & Baked goods —\n"
-        "  'Yellow bread', 'light rye' → rye/wheat bread family\n"
-        "  'Ma'amoul' → date-filled shortbread cookie\n"
-        "  'Gluten-free flour mix' → baking flour substitute (rice/corn/potato).\n"
-        "— Meats & Fish —\n"
-        "  'Seabass', 'sea bass' same fish; raw vs cooked are DIFFERENT states.\n"
-        "  'Mosht' fish → tilapia/cichlid family.\n"
-        "  Beef ≠ turkey ≠ chicken ≠ pork (different animals)\n"
-        "  Different fish species are NOT equivalent (salmon ≠ trout ≠ bass)\n"
-        "— Condiments & Herbs —\n"
-        "  Za'atar → thyme/oregano/sumac blend\n"
-        "  Amba → pickled mango sauce\n"
-        "  'Asian sauce (generic)' ↔ soy-based stir-fry sauce if macros similar.\n"
-        "— Processed & Cured Meats —\n"
-        "  Poultry pastrami → pastrami, turkey | chicken\n"
-        "— Beef Cuts —\n"
-        "  Entrecôte → rib-eye steak, boneless beef rib\n"
-        "— Misc —\n"
-        "  'Yellow cheese' (without spec) → semi-hard cow cheese\n"
-        "  'Energy bar' ↔ cereal/protein bar; compare macros not brand.\n\n"
-        "----------------------------------------------------------------------\n"
-        "CRITICAL RULES (in order of importance):\n"
-        "1. EXACT MATCHES: Identical foods with wording differences = TRUE\n"
-        "2. SPECIES RULE: Different species/varieties = FALSE (beets≠radishes, blueberries≠strawberries)\n"
-        "3. PROCESSING RULE: Major processing differences = FALSE (raw≠cooked, sweetened≠unsweetened)\n"
-        "4. CONSERVATIVE APPROACH: When uncertain, return False\n"
-        "5. ONLY return True for nutritionally similar foods with minimal differences\n\n"
-        "COMMON EXACT MATCHES:\n"
-        "• 'almonds, roasted, salted' = 'nuts, almonds, roasted, with salt added'\n"
-        "• 'banana, raw' = 'bananas, raw'\n"
-        "• 'beets, raw' = 'beets, fresh'\n"
-        "• Food name with/without 'nuts,' prefix are the same food\n"
+        "For each reference food item, determine which candidates have the same ingredients and same cooking method.\n\n"
+        "Return True only if the candidate has identical main ingredients and identical cooking method.\n"
+        "Return False if ingredients differ or cooking method differs.\n"
+        "Use common sense for unspecified cooking methods (e.g., 'apple' = raw apple).\n\n"
+        "Use the function call format to return your answers."
     ),
 }
 
@@ -176,195 +91,47 @@ def _build_equivalence_prompt(batch_df: pd.DataFrame, tool_name: str) -> List[di
 
     prompt: List[dict] = [_SYSTEM_PROMPT_EQUIVALENCE]
 
-    # ---------------- Few-shot examples to prime the model -----------------
-    few_shots = [
-        (
-            {
-                "description": "almonds, dry roasted, salted",
-                "food_category": "Nut and Seed Products",
-            },
-            [
-                {
-                    "description": "nuts, almonds, dry roasted, with salt added",
-                    "food_category": "Nut and Seed Products",
-                },
-                {
-                    "description": "almonds, raw",
-                    "food_category": "Nut and Seed Products",
-                },
-                {
-                    "description": "cashews, roasted, salted",
-                    "food_category": "Nut and Seed Products",
-                },
-            ],
-            [
-                True,
-                False,
-                False,
-            ],  # EXACT MATCH despite wording, different processing state, different nut species
-        ),
-        (
-            {
-                "description": "blueberries, frozen, unsweetened",
-                "food_category": "Fruits and Fruit Juices",
-            },
-            [
-                {
-                    "description": "blueberries, frozen, sweetened",
-                    "food_category": "Fruits and Fruit Juices",
-                },
-                {
-                    "description": "blueberries, raw",
-                    "food_category": "Fruits and Fruit Juices",
-                },
-                {
-                    "description": "blackberries, frozen, unsweetened",
-                    "food_category": "Fruits and Fruit Juices",
-                },
-            ],
-            [
-                False,
-                False,
-                False,
-            ],  # sweetened≠unsweetened, raw≠frozen, different berry species
-        ),
-        (
-            {
-                "description": "beef, ground, raw",
-                "food_category": "Beef Products",
-            },
-            [
-                {
-                    "description": "beef, grass fed, ground, raw",
-                    "food_category": "Beef Products",
-                },
-                {
-                    "description": "beef, ground, cooked",
-                    "food_category": "Beef Products",
-                },
-                {
-                    "description": "turkey, ground, raw",
-                    "food_category": "Poultry Products",
-                },
-            ],
-            [
-                True,
-                False,
-                False,
-            ],  # same food different source, raw≠cooked, different animal species
-        ),
-        (
-            {
-                "description": "beets, raw",
-                "food_category": "Vegetables and Vegetable Products",
-            },
-            [
-                {
-                    "description": "beets, fresh",
-                    "food_category": "Vegetables and Vegetable Products",
-                },
-                {
-                    "description": "beets, cooked, boiled",
-                    "food_category": "Vegetables and Vegetable Products",
-                },
-                {
-                    "description": "radishes, raw",
-                    "food_category": "Vegetables and Vegetable Products",
-                },
-            ],
-            [
-                True,
-                False,
-                False,
-            ],  # fresh≈raw, cooked≠raw, different root vegetable species
-        ),
-        (
-            {
-                "description": "amaranth grain, uncooked",
-                "food_category": "Cereal Grains and Pasta",
-            },
-            [
-                {
-                    "description": "amaranth grain, raw",
-                    "food_category": "Cereal Grains and Pasta",
-                },
-                {
-                    "description": "amaranth grain, cooked",
-                    "food_category": "Cereal Grains and Pasta",
-                },
-                {
-                    "description": "quinoa, uncooked",
-                    "food_category": "Cereal Grains and Pasta",
-                },
-            ],
-            [
-                True,
-                False,
-                False,
-            ],  # uncooked≈raw, cooked≠uncooked, different grain species
-        ),
-    ]
+    # Apply text normalization to the input data
+    normalizer = FoodDescriptionNormalizer()
 
-    for idx, (ref_desc, cand_list, equiv_list) in enumerate(few_shots, start=1):
-        example_payload = [
-            {
-                "reference": ref_desc,
-                "candidates": cand_list,
-            }
-        ]
-        tool_id = f"example_equiv_{idx}"
+    def normalize_food_item(item):
+        """Normalize a food item description."""
+        if isinstance(item, dict):
+            if "description" in item:
+                item = item.copy()
+                item["description"] = normalizer.normalize(item["description"])
+            return item
+        elif isinstance(item, str):
+            try:
+                # Try to parse as dict if it's a string representation
+                parsed = eval(item)
+                if isinstance(parsed, dict) and "description" in parsed:
+                    parsed["description"] = normalizer.normalize(parsed["description"])
+                    return parsed
+            except (ValueError, SyntaxError, TypeError):
+                pass
+            return normalizer.normalize(item)
+        return item
 
-        # User message with the example
-        prompt.append(
-            {
-                "role": "user",
-                "content": (
-                    "Determine which candidates are nutritionally equivalent to the reference. JSON list:\n"
-                    f"{json.dumps(example_payload, ensure_ascii=False)}"
-                ),
-            }
-        )
+    # Normalize the batch data
+    normalized_data = []
+    for _, row in batch_df.iterrows():
+        normalized_row = {}
+        for col, value in row.items():
+            if isinstance(value, list):
+                # Normalize each item in the list (candidates)
+                normalized_row[col] = [normalize_food_item(item) for item in value]
+            else:
+                # Normalize single item (reference)
+                normalized_row[col] = normalize_food_item(value)
+        normalized_data.append(normalized_row)
 
-        # Assistant message performing the function call
-        prompt.append(
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "id": tool_id,
-                        "type": "function",
-                        "function": {
-                            "name": tool_name,
-                            "arguments": json.dumps(
-                                {"equivalences": [{"is_equivalent": equiv_list}]}
-                            ),
-                        },
-                    }
-                ],
-            }
-        )
-
-        # Matching tool response message (required)
-        prompt.append(
-            {
-                "role": "tool",
-                "tool_call_id": tool_id,
-                "content": json.dumps(
-                    {"equivalences": [{"is_equivalent": equiv_list}]}
-                ),
-            }
-        )
-
-    # ---------------- Actual user batch ----------------
-    payload = batch_df.to_dict(orient="records")
+    # Create the user prompt
     prompt.append(
         {
             "role": "user",
             "content": (
-                "For every element in the JSON list, output a list of boolean values indicating whether each candidate is nutritionally equivalent to the reference.\n"
-                "Reply ONLY via the function call.\n\n"
-                f"JSON list:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+                f"JSON list:\n{json.dumps(normalized_data, ensure_ascii=False, indent=2)}"
             ),
         }
     )
@@ -425,68 +192,18 @@ def _query_equivalence_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
         parsed_response = json.loads(tool_call.function.arguments)
         equivalences = parsed_response["equivalences"]
 
-        # Get the actual column names from the batch_df
-        col_names = list(batch_df.columns)
-        col_reference = col_names[0]  # First column is reference
-        col_candidates = col_names[1]  # Second column is candidates
-
-        # Create simplified output with descriptions and boolean flags
-        simplified_results = []
+        # Create simple response with just the boolean arrays for debugging
+        boolean_results = []
         for i, row in enumerate(input_data):
-            # Extract just the description text from reference
-            reference_value = row[col_reference]
-            if isinstance(reference_value, dict):
-                reference_desc = reference_value.get(
-                    "description", str(reference_value)
-                )
-            elif isinstance(reference_value, str):
-                try:
-                    # Try to parse as dict if it's a string representation
-                    parsed = eval(reference_value)
-                    reference_desc = (
-                        parsed.get("description", reference_value)
-                        if isinstance(parsed, dict)
-                        else reference_value
-                    )
-                except:
-                    reference_desc = reference_value
-            else:
-                reference_desc = str(reference_value)
+            is_equivalent_list = equivalences[i]["is_equivalent"]
+            boolean_results.append(is_equivalent_list)
 
-            candidates_with_flags = []
-            for j, candidate in enumerate(row[col_candidates]):
-                # Extract just the description text from candidate
-                if isinstance(candidate, dict):
-                    candidate_desc = candidate.get("description", str(candidate))
-                elif isinstance(candidate, str):
-                    try:
-                        # Try to parse as dict if it's a string representation
-                        parsed = eval(candidate)
-                        candidate_desc = (
-                            parsed.get("description", candidate)
-                            if isinstance(parsed, dict)
-                            else candidate
-                        )
-                    except:
-                        candidate_desc = candidate
-                else:
-                    candidate_desc = str(candidate)
-
-                is_equivalent = equivalences[i]["is_equivalent"][j]
-                candidates_with_flags.append(
-                    {"description": candidate_desc, "is_equivalent": is_equivalent}
-                )
-
-            simplified_results.append(
-                {"reference": reference_desc, "candidates": candidates_with_flags}
-            )
-
-        # Create comprehensive response with both formats
+        # Create simple response with just the boolean arrays
         comprehensive_response = {
-            "simplified_results": simplified_results,
+            "equivalence_results": boolean_results,
             "batch_size": len(batch_df),
             "full_gpt_response": tool_call_dict,
-            "verification_info": "simplified_results shows reference description with candidates and their equivalence flags",
+            "verification_info": "equivalence_results[i] contains the boolean array for input row i",
         }
 
         with open("gpt_response.json", "w") as f:
@@ -499,9 +216,13 @@ def _query_equivalence_gpt(batch_df: pd.DataFrame) -> pd.DataFrame:
     parsed = BatchModel(**json.loads(raw_args))
     equivalences_df = pd.DataFrame([eq.model_dump() for eq in parsed.equivalences])
 
+    # Create a copy of the original batch_df and add the equivalence results
+    result_df = batch_df.copy()
+    result_df["is_equivalent"] = equivalences_df["is_equivalent"].tolist()
+
     # Preserve index alignment
-    equivalences_df.index = batch_df.index
-    return equivalences_df
+    result_df.index = batch_df.index
+    return result_df
 
 
 # ---------------------------------------------------------------------------
@@ -587,9 +308,30 @@ def are_equal_dataframe(
                         f"Failed GPT equivalence check for batch {idx}"
                     ) from exc
 
-        work_df["is_equivalent"] = pd.concat(results)
+        # Concatenate all batch results
+        combined_results = pd.concat(results, ignore_index=False)
+
+        # Validate that we haven't lost any data
+        original_count = len(work_df)
+        result_count = len(combined_results)
+        if original_count != result_count:
+            raise RuntimeError(
+                f"Data loss detected: original {original_count} rows, result {result_count} rows"
+            )
+
+        # Check that all original indices are preserved
+        original_indices = set(work_df.index)
+        result_indices = set(combined_results.index)
+        if original_indices != result_indices:
+            missing_indices = original_indices - result_indices
+            extra_indices = result_indices - original_indices
+            raise RuntimeError(
+                f"Index mismatch: missing {missing_indices}, extra {extra_indices}"
+            )
+
+        # Process the combined results to expand candidates
         work_df = (
-            work_df.set_index(col_reference)
+            combined_results.set_index(col_reference)
             .apply(
                 lambda row: list(zip(row[col_candidates], row["is_equivalent"])),
                 axis=1,
@@ -603,8 +345,11 @@ def are_equal_dataframe(
                 **{col_candidates: lambda df: df[col_candidates].apply(literal_eval)}
             )
         )
-        # TODO: somethings is off with the numbers here.
-        work_df["embedding_similarity"] = df["embedding_similarity"].values
+
+        # Add embedding similarity if it exists in original df
+        if "embedding_similarity" in df.columns:
+            work_df["embedding_similarity"] = df["embedding_similarity"].values
+
         return work_df
 
     return df

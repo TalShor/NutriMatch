@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument("--main_fcdb", type=str, required=True)
     parser.add_argument("--candidate_fcdb", type=str, required=True)
     parser.add_argument("--n", type=int, default=5)
-    parser.add_argument("--batch_size", type=int, default=200)
+    parser.add_argument("--batch_size", type=int, default=25)
     parser.add_argument("--num_threads", type=int, default=16)
     return parser.parse_args()
 
@@ -77,8 +77,6 @@ if __name__ == "__main__":
         main_to_multiple_candidates_without_exact_match.sort_values(
             by="main_description"
         )
-        .head(3000)
-        .tail(1000)
     )
 
     main_to_multiple_candidates_without_exact_match_and_similarity = (
